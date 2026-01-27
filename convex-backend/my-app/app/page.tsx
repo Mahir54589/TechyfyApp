@@ -43,13 +43,13 @@ export default function Home() {
 }
 
 function Content() {
-  const { viewer, numbers } =
-    useQuery(api.myFunctions.listNumbers, {
-      count: 10,
+  const { products } =
+    useQuery(api.myFunctions.listProductsExample, {
+      limit: 10,
     }) ?? {};
-  const addNumber = useMutation(api.myFunctions.addNumber);
+  const addProduct = useMutation(api.myFunctions.addProductExample);
 
-  if (viewer === undefined || numbers === undefined) {
+  if (products === undefined) {
     return (
       <div className="mx-auto">
         <div className="flex items-center gap-2">
@@ -75,8 +75,8 @@ function Content() {
           Welcome!
         </h2>
         <p className="text-slate-600 dark:text-slate-400 mt-2">
-          This demo app generates random numbers and stores them in your Convex
-          database.
+          This app manages products and generates invoices through a Telegram bot.
+          The data is stored in your Convex database.
         </p>
       </div>
 
@@ -84,30 +84,32 @@ function Content() {
 
       <div className="flex flex-col gap-4">
         <h2 className="font-semibold text-xl text-slate-800 dark:text-slate-200">
-          Number generator
+          Product Management
         </h2>
         <p className="text-slate-600 dark:text-slate-400 text-sm">
-          Click the button below to generate a new number. The data is persisted
-          in the Convex cloud database - open this page in another window and
-          see the data sync automatically!
+          View products from the database. Products are synced from Google Sheets
+          and can be used to generate invoices through the Telegram bot.
         </p>
-        <button
-          className="bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 text-white text-sm font-medium px-6 py-3 rounded-lg cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-          onClick={() => {
-            void addNumber({ value: Math.floor(Math.random() * 10) });
-          }}
-        >
-          + Generate random number
-        </button>
         <div className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl p-4 shadow-sm">
           <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">
-            Newest Numbers
+            Products ({products?.length || 0})
           </p>
-          <p className="text-slate-700 dark:text-slate-300 font-mono text-lg">
-            {numbers?.length === 0
-              ? "Click the button to generate a number!"
-              : (numbers?.join(", ") ?? "...")}
-          </p>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {products?.length === 0 ? (
+              <p className="text-slate-700 dark:text-slate-300">
+                No products found. Initialize the database to add sample products.
+              </p>
+            ) : (
+              products?.map((product) => (
+                <div key={product._id} className="text-sm border-b border-slate-200 dark:border-slate-700 pb-2">
+                  <p className="font-medium text-slate-800 dark:text-slate-200">{product.name}</p>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    {product.color} • {product.category} • ${product.sellingPrice}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
