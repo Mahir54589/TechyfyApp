@@ -6,9 +6,9 @@ import { api } from "../../convex/_generated/api";
 export default function Home({
   preloaded,
 }: {
-  preloaded: Preloaded<typeof api.myFunctions.listProductsExample>;
+  preloaded: Preloaded<typeof api.myFunctions.getSampleProducts>;
 }) {
-  const data = usePreloadedQuery(preloaded);
+  const data = usePreloadedQuery(preloaded) as { name: string; color: string; warranty: string; category: string; sellingPrice: number; }[];
   const addProduct = useMutation(api.myFunctions.addProductExample);
   return (
     <>

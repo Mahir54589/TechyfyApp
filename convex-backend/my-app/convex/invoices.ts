@@ -2,6 +2,33 @@ import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
 
+// PDF Generation API URL (Vercel deployment)
+const PDF_API_URL = process.env.PDF_API_URL || "http://localhost:3000/api/generate-invoice-pdf";
+
+// Invoice type
+type Invoice = {
+  _id: string;
+  invoiceNumber: string;
+  date: number;
+  customerName: string;
+  customerAddress: string;
+  customerPhone: string;
+  items: Array<{
+    productId: string;
+    productName: string;
+    color: string;
+    warranty: string;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+  }>;
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  pdfUrl?: string;
+};
+
 // Get invoice by number
 export const getByNumber = query({
   args: {
@@ -29,7 +56,7 @@ export const list = query({
   },
 });
 
-// Create a new invoice with auto-incrementing number
+// Create a new invoice with auto-incrementing number (atomic)
 export const create = mutation({
   args: {
     customerName: v.string(),
@@ -56,20 +83,39 @@ export const create = mutation({
     const now = new Date();
     const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
     
-    // Get or create invoice counter for current month
-    let counter = await ctx.db
+    // Try to get existing counter with atomic check
+    const counter = await ctx.db
       .query("invoiceCounter")
       .withIndex("by_yearMonth", (q) => q.eq("yearMonth", yearMonth))
       .first();
     
-    let currentCounter = 1;
+    let currentCounter: number;
     
     if (!counter) {
-      // Create new counter for this month
-      await ctx.db.insert("invoiceCounter", {
-        yearMonth,
-        counter: 1,
-      });
+      // Create new counter for this month - use unique constraint via yearMonth
+      currentCounter = 1;
+      try {
+        await ctx.db.insert("invoiceCounter", {
+          yearMonth,
+          counter: currentCounter,
+        });
+      } catch {
+        // If insert fails (race condition), another request created it
+        // Re-fetch and increment
+        const existingCounter = await ctx.db
+          .query("invoiceCounter")
+          .withIndex("by_yearMonth", (q) => q.eq("yearMonth", yearMonth))
+          .first();
+        
+        if (!existingCounter) {
+          throw new Error("Failed to create or fetch invoice counter");
+        }
+        
+        currentCounter = existingCounter.counter + 1;
+        await ctx.db.patch(existingCounter._id, {
+          counter: currentCounter,
+        });
+      }
     } else {
       // Increment existing counter
       currentCounter = counter.counter + 1;
@@ -80,6 +126,16 @@ export const create = mutation({
     
     // Generate invoice number in YYYYMM### format
     const invoiceNumber = `${yearMonth}${String(currentCounter).padStart(3, "0")}`;
+    
+    // Verify no duplicate invoice number exists
+    const existingInvoice = await ctx.db
+      .query("invoices")
+      .withIndex("by_invoiceNumber", (q) => q.eq("invoiceNumber", invoiceNumber))
+      .first();
+    
+    if (existingInvoice) {
+      throw new Error(`Invoice number ${invoiceNumber} already exists. Please retry.`);
+    }
     
     // Create the invoice
     const invoiceId = await ctx.db.insert("invoices", {
@@ -105,9 +161,15 @@ export const generatePDF = action({
   args: {
     invoiceId: v.id("invoices"),
   },
-  handler: async (ctx, args): Promise<{success: boolean, message: string, invoiceNumber?: string}> => {
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    invoiceNumber: v.optional(v.string()),
+    pdfBase64: v.optional(v.string()),
+  }),
+  handler: async (ctx, args): Promise<{success: boolean; message: string; invoiceNumber?: string; pdfBase64?: string}> => {
     // Get the invoice data
-    const invoice = await ctx.runQuery(api.invoices.get, {
+    const invoice: Invoice | null = await ctx.runQuery(api.invoices.get, {
       id: args.invoiceId,
     });
     
@@ -115,13 +177,69 @@ export const generatePDF = action({
       throw new Error("Invoice not found");
     }
     
-    // This will be implemented later to call the PDF generation API
-    // For now, return a placeholder
-    return {
-      success: false,
-      message: "PDF generation not implemented yet",
-      invoiceNumber: invoice.invoiceNumber
-    };
+    try {
+      // Call the PDF generation API using global fetch
+      const response = await fetch(PDF_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          invoiceNumber: invoice.invoiceNumber,
+          date: new Date(invoice.date).toISOString().split("T")[0],
+          customerName: invoice.customerName,
+          customerAddress: invoice.customerAddress,
+          customerPhone: invoice.customerPhone,
+          items: invoice.items,
+          subtotal: invoice.subtotal,
+          taxRate: invoice.taxRate,
+          taxAmount: invoice.taxAmount,
+          total: invoice.total,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`PDF API error: ${response.status} - ${errorText}`);
+      }
+      
+      // Get PDF as buffer and convert to base64
+      const pdfBuffer = await response.arrayBuffer();
+      const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+      
+      // Update invoice with PDF URL placeholder (could store actual URL if uploaded)
+      await ctx.runMutation(api.invoices.updatePdfUrl, {
+        invoiceId: args.invoiceId,
+        pdfUrl: `data:application/pdf;base64,${pdfBase64.substring(0, 50)}...`, // Store reference
+      });
+      
+      return {
+        success: true,
+        message: "PDF generated successfully",
+        invoiceNumber: invoice.invoiceNumber,
+        pdfBase64: pdfBase64,
+      };
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Unknown error during PDF generation",
+        invoiceNumber: invoice.invoiceNumber,
+      };
+    }
+  },
+});
+
+// Update PDF URL for an invoice
+export const updatePdfUrl = mutation({
+  args: {
+    invoiceId: v.id("invoices"),
+    pdfUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.invoiceId, {
+      pdfUrl: args.pdfUrl,
+    });
   },
 });
 

@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
-import { api } from "./_generated/api";
 
 // Get system configuration by key
 export const get = query({
@@ -49,6 +48,7 @@ export const set = mutation({
 
 // Initialize default configuration
 export const initializeDefaults = mutation({
+  args: {},
   handler: async (ctx) => {
     // Set default VAT rate (15% for Bangladesh)
     await ctx.db.insert("systemConfig", {

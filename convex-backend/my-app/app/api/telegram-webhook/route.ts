@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../convex/_generated/api";
+import TelegramBot, { SendDocumentOptions } from "node-telegram-bot-api";
 
 // Initialize Convex client
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 // Initialize Telegram Bot
-const TelegramBot = require("node-telegram-bot-api");
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN!);
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN!, { polling: false });
 
-// Store conversation state (in production, this should be stored in a database)
-const conversationStates = new Map<number, any>();
+// Authorized user ID from environment
+const ALLOWED_USER_ID = process.env.TELEGRAM_USER_ID;
 
 // Define conversation states
 enum ConversationState {
@@ -20,6 +20,32 @@ enum ConversationState {
   AWAITING_CONFIRMATION = "awaiting_confirmation",
 }
 
+// Type definitions
+interface CustomerInfo {
+  name: string;
+  address: string;
+  phone: string;
+}
+
+interface ConversationData {
+  customerInfo?: CustomerInfo;
+  foundProducts?: Array<{
+    _id: string;
+    name: string;
+    color: string;
+    warranty: string;
+    sellingPrice: number;
+  }>;
+  quantities?: Array<{
+    productIndex: number;
+    quantity: number;
+  }>;
+  subtotal?: number;
+  taxRate?: number;
+  taxAmount?: number;
+  total?: number;
+}
+
 // Helper function to validate Bangladesh phone number
 const validatePhone = (phone: string): boolean => {
   const phoneRegex = /^01[0-9]{9}$/;
@@ -27,7 +53,7 @@ const validatePhone = (phone: string): boolean => {
 };
 
 // Helper function to parse customer info
-const parseCustomerInfo = (text: string) => {
+const parseCustomerInfo = (text: string): CustomerInfo | null => {
   // Try comma-separated format first
   const commaMatch = text.match(/^([^,]+),\s*([^,]+),\s*(.+)$/);
   if (commaMatch) {
@@ -37,9 +63,9 @@ const parseCustomerInfo = (text: string) => {
       phone: commaMatch[3].trim(),
     };
   }
-  
+
   // Try line-separated format
-  const lines = text.split('\n').filter(line => line.trim());
+  const lines = text.split("\n").filter((line) => line.trim());
   if (lines.length >= 3) {
     return {
       name: lines[0].trim(),
@@ -47,7 +73,7 @@ const parseCustomerInfo = (text: string) => {
       phone: lines[2].trim(),
     };
   }
-  
+
   return null;
 };
 
@@ -57,7 +83,11 @@ const formatCurrency = (amount: number): string => {
 };
 
 // Helper function to send message
-const sendMessage = async (chatId: number, text: string, options?: any) => {
+const sendMessage = async (
+  chatId: number,
+  text: string,
+  options?: TelegramBot.SendMessageOptions
+): Promise<void> => {
   try {
     await bot.sendMessage(chatId, text, options);
   } catch (error) {
@@ -65,112 +95,166 @@ const sendMessage = async (chatId: number, text: string, options?: any) => {
   }
 };
 
+// Helper function to check if user is authorized
+const isAuthorized = (userId: number): boolean => {
+  if (!ALLOWED_USER_ID) {
+    console.error("TELEGRAM_USER_ID not set in environment variables");
+    return false;
+  }
+  return userId.toString() === ALLOWED_USER_ID;
+};
+
 // Handle incoming messages
-const handleMessage = async (msg: any) => {
+const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
   const chatId = msg.chat.id;
   const text = msg.text;
-  
-  // Get current conversation state
-  const currentState = conversationStates.get(chatId) || ConversationState.AWAITING_CUSTOMER_INFO;
-  
+  const userId = msg.from?.id;
+
+  if (!userId || !text) {
+    return;
+  }
+
+  // Check authorization
+  if (!isAuthorized(userId)) {
+    await sendMessage(
+      chatId,
+      "⛔ Unauthorized access. This bot is private and only responds to the authorized user."
+    );
+    console.warn(`Unauthorized access attempt from user ID: ${userId}`);
+    return;
+  }
+
+  // Get current conversation state from Convex
+  const stateRecord = await convex.query(api.conversationState.getState, {
+    userId,
+  });
+
+  const currentState = (stateRecord?.state as ConversationState) ||
+    ConversationState.AWAITING_CUSTOMER_INFO;
+  const stateData: ConversationData = stateRecord?.data || {};
+
   // Handle commands
   if (text === "/start" || text === "/new") {
-    conversationStates.set(chatId, ConversationState.AWAITING_CUSTOMER_INFO);
-    await sendMessage(chatId, 
+    await convex.mutation(api.conversationState.setState, {
+      userId,
+      state: ConversationState.AWAITING_CUSTOMER_INFO,
+    });
+    await sendMessage(
+      chatId,
       "👋 Welcome to the Invoice Generator Bot!\n\n" +
-      "Please provide customer information in one of these formats:\n\n" +
-      "Format 1 (comma-separated):\n" +
-      "Customer Name, Address, Phone Number\n\n" +
-      "Format 2 (line-separated):\n" +
-      "Customer Name\n" +
-      "Address\n" +
-      "Phone Number\n\n" +
-      "Example: Rahul Ahmed, Dhanmondi Road 27, Dhaka 1209, 01712345678"
+        "Please provide customer information in one of these formats:\n\n" +
+        "Format 1 (comma-separated):\n" +
+        "Customer Name, Address, Phone Number\n\n" +
+        "Format 2 (line-separated):\n" +
+        "Customer Name\n" +
+        "Address\n" +
+        "Phone Number\n\n" +
+        "Example: Rahul Ahmed, Dhanmondi Road 27, Dhaka 1209, 01712345678"
     );
     return;
   }
-  
+
   if (text === "/help") {
-    await sendMessage(chatId,
+    await sendMessage(
+      chatId,
       "📖 *Help*\n\n" +
-      "/start or /new - Start a new invoice\n" +
-      "/cancel - Cancel current invoice\n" +
-      "/help - Show this help message\n\n" +
-      "Phone number format: 01XXXXXXXXX (11 digits starting with 01)"
+        "/start or /new - Start a new invoice\n" +
+        "/cancel - Cancel current invoice\n" +
+        "/help - Show this help message\n\n" +
+        "Phone number format: 01XXXXXXXXX (11 digits starting with 01)",
+      { parse_mode: "Markdown" }
     );
     return;
   }
-  
+
   if (text === "/cancel") {
-    conversationStates.delete(chatId);
-    await sendMessage(chatId, "❌ Invoice cancelled. Type /start to create a new invoice.");
+    await convex.mutation(api.conversationState.clearState, { userId });
+    await sendMessage(
+      chatId,
+      "❌ Invoice cancelled. Type /start to create a new invoice."
+    );
     return;
   }
-  
+
   // Handle based on current state
   switch (currentState) {
-    case ConversationState.AWAITING_CUSTOMER_INFO:
+    case ConversationState.AWAITING_CUSTOMER_INFO: {
       const customerInfo = parseCustomerInfo(text);
-      
+
       if (!customerInfo) {
-        await sendMessage(chatId,
+        await sendMessage(
+          chatId,
           "❌ Invalid format. Please use one of these formats:\n\n" +
-          "Format 1 (comma-separated):\n" +
-          "Customer Name, Address, Phone Number\n\n" +
-          "Format 2 (line-separated):\n" +
-          "Customer Name\n" +
-          "Address\n" +
-          "Phone Number"
+            "Format 1 (comma-separated):\n" +
+            "Customer Name, Address, Phone Number\n\n" +
+            "Format 2 (line-separated):\n" +
+            "Customer Name\n" +
+            "Address\n" +
+            "Phone Number"
         );
         return;
       }
-      
+
       // Validate phone number
       if (!validatePhone(customerInfo.phone)) {
-        await sendMessage(chatId,
+        await sendMessage(
+          chatId,
           "❌ Invalid phone number. Please use Bangladesh format: 01XXXXXXXXX (11 digits starting with 01)"
         );
         return;
       }
-      
+
       // Store customer info and move to next state
-      conversationStates.set(chatId, {
+      await convex.mutation(api.conversationState.setState, {
+        userId,
         state: ConversationState.AWAITING_PRODUCTS,
-        customerInfo,
+        data: { customerInfo },
       });
-      
-      await sendMessage(chatId,
+
+      await sendMessage(
+        chatId,
         "✅ Customer details saved!\n" +
-        `👤 Name: ${customerInfo.name}\n` +
-        `📍 Address: ${customerInfo.address}\n` +
-        `📞 Phone: ${customerInfo.phone}\n\n` +
-        "Now send me the product names (one per line or comma-separated)"
+          `👤 Name: ${customerInfo.name}\n` +
+          `📍 Address: ${customerInfo.address}\n` +
+          `📞 Phone: ${customerInfo.phone}\n\n` +
+          "Now send me the product names (one per line or comma-separated)"
       );
       break;
-      
-    case ConversationState.AWAITING_PRODUCTS:
-      const state = conversationStates.get(chatId);
-      const productNames = text.split(/[,\n]/).map((p: string) => p.trim()).filter((p: string) => p);
-      
+    }
+
+    case ConversationState.AWAITING_PRODUCTS: {
+      const productNames = text
+        .split(/[,\n]/)
+        .map((p) => p.trim())
+        .filter((p) => p);
+
       if (productNames.length === 0) {
-        await sendMessage(chatId, "❌ Please provide at least one product name.");
+        await sendMessage(
+          chatId,
+          "❌ Please provide at least one product name."
+        );
         return;
       }
-      
+
       try {
         // Search for products in Convex
         const searchResults = [];
-        
+
         for (const productName of productNames) {
-          const results = await convex.query(api.products.search, { query: productName });
+          const results = await convex.query(api.products.search, {
+            query: productName,
+          });
           searchResults.push(...results);
         }
-        
+
         if (searchResults.length === 0) {
-          await sendMessage(chatId, "❌ No products found. Please check spelling and try again.");
+          await sendMessage(
+            chatId,
+            "❌ No products found. Please check spelling and try again."
+          );
           return;
         }
-        
+
         // Display found products
         let message = "Found products:\n\n";
         searchResults.forEach((product, index) => {
@@ -179,37 +263,47 @@ const handleMessage = async (msg: any) => {
           message += `   Warranty: ${product.warranty}\n`;
           message += `   Price: ${formatCurrency(product.sellingPrice)}\n\n`;
         });
-        
+
         message += "Reply with quantity for each:\n";
         message += "Format: 1=2, 2=1 (product number = quantity)\n";
         message += "Or just 'OK' for 1 unit each";
-        
+
         await sendMessage(chatId, message);
-        
+
         // Update state with found products
-        conversationStates.set(chatId, {
-          ...state,
+        await convex.mutation(api.conversationState.setState, {
+          userId,
           state: ConversationState.AWAITING_QUANTITY,
-          foundProducts: searchResults,
+          data: {
+            ...stateData,
+            foundProducts: searchResults,
+          },
         });
       } catch (error) {
         console.error("Error searching products:", error);
-        await sendMessage(chatId, "❌ Error searching products. Please try again.");
+        await sendMessage(
+          chatId,
+          "❌ Error searching products. Please try again."
+        );
       }
       break;
-      
-    case ConversationState.AWAITING_QUANTITY:
-      const quantityState = conversationStates.get(chatId);
-      
-      if (!quantityState || !quantityState.foundProducts) {
-        await sendMessage(chatId, "❌ Error: No products found. Please start over with /start");
-        conversationStates.delete(chatId);
+    }
+
+    case ConversationState.AWAITING_QUANTITY: {
+      if (!stateData.foundProducts) {
+        await sendMessage(
+          chatId,
+          "❌ Error: No products found. Please start over with /start"
+        );
+        await convex.mutation(api.conversationState.clearState, { userId });
         return;
       }
-      
+
+      let quantities: Array<{ productIndex: number; quantity: number }>;
+
       if (text.toLowerCase() === "ok") {
         // Set default quantity of 1 for all products
-        quantityState.quantities = quantityState.foundProducts.map((_: any, index: number) => ({
+        quantities = stateData.foundProducts.map((_, index) => ({
           productIndex: index,
           quantity: 1,
         }));
@@ -217,89 +311,103 @@ const handleMessage = async (msg: any) => {
         // Parse quantities
         const quantityMatches = text.match(/(\d+)\s*=\s*(\d+)/g);
         if (!quantityMatches) {
-          await sendMessage(chatId,
+          await sendMessage(
+            chatId,
             "❌ Invalid format. Use: 1=2, 2=1 (product number = quantity)\n" +
-            "Or just 'OK' for 1 unit each"
+              "Or just 'OK' for 1 unit each"
           );
           return;
         }
-        
-        const quantities = [];
+
+        quantities = [];
         for (const match of quantityMatches) {
-          const [_, productIndex, quantity] = match.split("=").map((s: string) => s.trim());
+          const parts = match.split("=").map((s) => s.trim());
+          const productIndex = parseInt(parts[0]) - 1; // Convert to 0-based index
+          const quantity = parseInt(parts[1]);
           quantities.push({
-            productIndex: parseInt(productIndex) - 1, // Convert to 0-based index
-            quantity: parseInt(quantity),
+            productIndex,
+            quantity,
           });
         }
-        
-        quantityState.quantities = quantities;
       }
-      
+
       // Calculate line totals and prepare summary
       let subtotal = 0;
       let summary = "📋 *Invoice Summary*\n━━━━━━━━━━━━━━━━━━\n";
-      
+
       // Check if all products exist before proceeding
-      for (let i = 0; i < quantityState.quantities.length; i++) {
-        const item = quantityState.quantities[i];
-        const product = quantityState.foundProducts[item.productIndex];
+      for (let i = 0; i < quantities.length; i++) {
+        const item = quantities[i];
+        const product = stateData.foundProducts[item.productIndex];
         if (!product) {
-          await sendMessage(chatId, `❌ Error: Product not found for item ${i + 1}. Please start over with /start`);
-          conversationStates.delete(chatId);
+          await sendMessage(
+            chatId,
+            `❌ Error: Product not found for item ${
+              i + 1
+            }. Please start over with /start`
+          );
+          await convex.mutation(api.conversationState.clearState, { userId });
           return;
         }
       }
-      
+
       // Now safely calculate totals
-      quantityState.quantities.forEach((item: any, index: number) => {
-        const product = quantityState.foundProducts[item.productIndex];
+      quantities.forEach((item, index) => {
+        const product = stateData.foundProducts![item.productIndex];
         const amount = product.sellingPrice * item.quantity;
         subtotal += amount;
-        
-        summary += `${index + 1}. ${product.name} x${item.quantity} — ${formatCurrency(amount)}\n`;
+
+        summary += `${index + 1}. ${product.name} x${item.quantity} — ${formatCurrency(
+          amount
+        )}\n`;
       });
-      
+
       const taxRate = 0.15; // 15% VAT
       const taxAmount = subtotal * taxRate;
       const total = subtotal + taxAmount;
-      
+
       summary += `\nSubtotal: ${formatCurrency(subtotal)}\n`;
       summary += `VAT (15%): ${formatCurrency(taxAmount)}\n`;
       summary += "━━━━━━━━━━━━━━━━━━\n";
       summary += `💰 Total: ${formatCurrency(total)}\n\n`;
       summary += "Reply 'OK' to generate invoice\n";
       summary += "Or edit price: '1 125000' (changes item 1 price to ৳125,000)";
-      
-      await sendMessage(chatId, summary);
-      
+
+      await sendMessage(chatId, summary, { parse_mode: "Markdown" });
+
       // Update state with calculated values
-      conversationStates.set(chatId, {
-        ...quantityState,
+      await convex.mutation(api.conversationState.setState, {
+        userId,
         state: ConversationState.AWAITING_CONFIRMATION,
-        subtotal,
-        taxRate,
-        taxAmount,
-        total,
+        data: {
+          ...stateData,
+          quantities,
+          subtotal,
+          taxRate,
+          taxAmount,
+          total,
+        },
       });
       break;
-      
-    case ConversationState.AWAITING_CONFIRMATION:
-      const confirmationState = conversationStates.get(chatId);
-      
-      if (!confirmationState) {
-        await sendMessage(chatId, "❌ Error: No invoice data found. Please start over with /start");
-        conversationStates.delete(chatId);
+    }
+
+    case ConversationState.AWAITING_CONFIRMATION: {
+      if (!stateData.customerInfo || !stateData.foundProducts || !stateData.quantities) {
+        await sendMessage(
+          chatId,
+          "❌ Error: No invoice data found. Please start over with /start"
+        );
+        await convex.mutation(api.conversationState.clearState, { userId });
         return;
       }
-      
+
       if (text.toLowerCase() === "ok") {
         try {
           // Create invoice in Convex
-          const items = confirmationState.quantities.map((item: any) => {
-            const product = confirmationState.foundProducts[item.productIndex];
+          const items = stateData.quantities.map((item) => {
+            const product = stateData.foundProducts![item.productIndex];
             return {
-              productId: product._id,
+              productId: product._id as string,
               productName: product.name,
               color: product.color,
               warranty: product.warranty,
@@ -308,118 +416,153 @@ const handleMessage = async (msg: any) => {
               amount: product.sellingPrice * item.quantity,
             };
           });
-          
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invoice = await convex.mutation(api.invoices.create, {
-            customerName: confirmationState.customerInfo.name,
-            customerAddress: confirmationState.customerInfo.address,
-            customerPhone: confirmationState.customerInfo.phone,
-            items,
-            subtotal: confirmationState.subtotal,
-            taxRate: confirmationState.taxRate,
-            taxAmount: confirmationState.taxAmount,
-            total: confirmationState.total,
+            customerName: stateData.customerInfo.name,
+            customerAddress: stateData.customerInfo.address,
+            customerPhone: stateData.customerInfo.phone,
+            items: items as any,
+            subtotal: stateData.subtotal!,
+            taxRate: stateData.taxRate!,
+            taxAmount: stateData.taxAmount!,
+            total: stateData.total!,
           });
-          
+
           if (!invoice) {
-            await sendMessage(chatId, "❌ Failed to create invoice. Please try again.");
+            await sendMessage(
+              chatId,
+              "❌ Failed to create invoice. Please try again."
+            );
             return;
           }
-          
-          await sendMessage(chatId, "⏳ Generating invoice...");
-          
+
+          await sendMessage(chatId, "⏳ Generating PDF...");
+
           // Generate PDF
           const pdfResult = await convex.action(api.invoices.generatePDF, {
-            invoiceId: invoice!._id,
+            invoiceId: invoice._id,
           });
-          
-          if (pdfResult.success) {
-            await sendMessage(chatId,
-              `✅ Invoice generated successfully!\n` +
-              `📄 Invoice Number: ${invoice.invoiceNumber}\n` +
-              `📅 Date: ${new Date(invoice.date).toLocaleDateString()}\n\n` +
-              "You can download and share this PDF with your customer."
-            );
+
+          if (pdfResult.success && pdfResult.pdfBase64) {
+            // Convert base64 to buffer
+            const pdfBuffer = Buffer.from(pdfResult.pdfBase64, "base64");
+
+            // Send PDF to user
+            const docOptions: SendDocumentOptions = {
+              caption:
+                `✅ Invoice generated successfully!\n` +
+                `📄 Invoice Number: ${invoice.invoiceNumber}\n` +
+                `📅 Date: ${new Date(invoice.date).toLocaleDateString()}\n\n` +
+                "You can download and share this PDF with your customer.",
+            };
+            await bot.sendDocument(chatId, pdfBuffer, docOptions);
           } else {
-            await sendMessage(chatId, "❌ Failed to generate PDF. Please try again.");
+            await sendMessage(
+              chatId,
+              `❌ Failed to generate PDF: ${pdfResult.message}`
+            );
           }
-          
-          // Reset conversation state
-          conversationStates.delete(chatId);
+
+          // Clear conversation state
+          await convex.mutation(api.conversationState.clearState, { userId });
         } catch (error) {
           console.error("Error creating invoice:", error);
-          await sendMessage(chatId, "❌ Error creating invoice. Please try again.");
+          await sendMessage(
+            chatId,
+            "❌ Error creating invoice. Please try again."
+          );
         }
       } else {
         // Try to parse price edit
         const priceEditMatch = text.match(/(\d+)\s+(\d+)/);
         if (priceEditMatch) {
-          const [_, itemIndex, newPrice] = priceEditMatch;
-          const index = parseInt(itemIndex) - 1; // Convert to 0-based index
-          
-          if (index >= 0 && index < confirmationState.quantities.length) {
-            const productIndex = confirmationState.quantities[index].productIndex;
-            const product = confirmationState.foundProducts[productIndex];
-            const oldPrice = product.sellingPrice;
-            const newPriceNum = parseInt(newPrice);
-            
-            // Update product price temporarily
-            product.sellingPrice = newPriceNum;
-            
+          const itemIndex = parseInt(priceEditMatch[1]) - 1; // Convert to 0-based index
+          const newPrice = parseInt(priceEditMatch[2]);
+
+          if (
+            itemIndex >= 0 &&
+            itemIndex < stateData.quantities.length &&
+            stateData.foundProducts
+          ) {
+            const productIndex = stateData.quantities[itemIndex].productIndex;
+            const product = stateData.foundProducts[productIndex];
+
+            // Create a copy of foundProducts with updated price
+            const updatedProducts = [...stateData.foundProducts];
+            updatedProducts[productIndex] = {
+              ...product,
+              sellingPrice: newPrice,
+            };
+
             // Recalculate totals
             let newSubtotal = 0;
-            confirmationState.quantities.forEach((item: any) => {
-              const p = confirmationState.foundProducts[item.productIndex];
+            stateData.quantities.forEach((item) => {
+              const p = updatedProducts[item.productIndex];
               newSubtotal += p.sellingPrice * item.quantity;
             });
-            
-            const newTaxAmount = newSubtotal * confirmationState.taxRate;
+
+            const newTaxAmount = newSubtotal * stateData.taxRate!;
             const newTotal = newSubtotal + newTaxAmount;
-            
-            // Update state
-            confirmationState.subtotal = newSubtotal;
-            confirmationState.taxAmount = newTaxAmount;
-            confirmationState.total = newTotal;
-            
+
             // Show updated summary
-            let summary = "✅ Price updated!\n\n📋 *Updated Invoice Summary*\n━━━━━━━━━━━━━━━━━━\n";
-            
-            confirmationState.quantities.forEach((item: any, idx: number) => {
-              const p = confirmationState.foundProducts[item.productIndex];
+            let summary =
+              "✅ Price updated!\n\n📋 *Updated Invoice Summary*\n━━━━━━━━━━━━━━━━━━\n";
+
+            stateData.quantities.forEach((item, idx) => {
+              const p = updatedProducts[item.productIndex];
               const amount = p.sellingPrice * item.quantity;
-              summary += `${idx + 1}. ${p.name} x${item.quantity} — ${formatCurrency(amount)}\n`;
+              summary += `${idx + 1}. ${p.name} x${item.quantity} — ${formatCurrency(
+                amount
+              )}\n`;
             });
-            
+
             summary += `\nSubtotal: ${formatCurrency(newSubtotal)}\n`;
             summary += `VAT (15%): ${formatCurrency(newTaxAmount)}\n`;
             summary += "━━━━━━━━━━━━━━━━━━\n";
             summary += `💰 Total: ${formatCurrency(newTotal)}\n\n`;
             summary += "Reply 'OK' to confirm";
-            
-            await sendMessage(chatId, summary);
+
+            await sendMessage(chatId, summary, { parse_mode: "Markdown" });
+
+            // Update state
+            await convex.mutation(api.conversationState.setState, {
+              userId,
+              state: ConversationState.AWAITING_CONFIRMATION,
+              data: {
+                ...stateData,
+                foundProducts: updatedProducts,
+                subtotal: newSubtotal,
+                taxAmount: newTaxAmount,
+                total: newTotal,
+              },
+            });
           } else {
             await sendMessage(chatId, "❌ Invalid item number. Please try again.");
           }
         } else {
-          await sendMessage(chatId,
+          await sendMessage(
+            chatId,
             "❌ Invalid input. Reply 'OK' to generate invoice\n" +
-            "Or edit price: '1 125000' (changes item 1 price to ৳125,000)"
+              "Or edit price: '1 125000' (changes item 1 price to ৳125,000)"
           );
         }
       }
       break;
+    }
   }
 };
 
 // Webhook handler
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
-    
+
     // Process each update
     if (body.message) {
       await handleMessage(body.message);
     }
-    
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Webhook error:", error);
@@ -428,6 +571,6 @@ export async function POST(request: NextRequest) {
 }
 
 // For webhook setup
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   return NextResponse.json({ status: "Telegram bot webhook is running" });
 }

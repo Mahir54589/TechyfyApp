@@ -4,9 +4,7 @@ import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 
 export default async function ServerPage() {
-  const preloaded = await preloadQuery(api.myFunctions.listProductsExample, {
-    limit: 3,
-  });
+  const preloaded = await preloadQuery(api.myFunctions.getSampleProducts);
 
   const data = preloadedQueryResult(preloaded);
 

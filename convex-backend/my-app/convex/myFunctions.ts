@@ -1,26 +1,51 @@
 import { v } from "convex/values";
-import { query, mutation, action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { query, mutation } from "./_generated/server";
 
-// Write your Convex functions in any file inside this directory (`convex`).
-// See https://docs.convex.dev/functions for more.
-
-// Example query to get products
-export const listProductsExample = query({
-  args: {
-    limit: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const products = await ctx.db
-      .query("products")
-      .take(args.limit);
-    return {
-      products: products,
-    };
+// Get sample products for initialization
+export const getSampleProducts = query({
+  args: {},
+  handler: async () => {
+    return [
+      {
+        name: "iPhone 15 Pro",
+        color: "Space Black",
+        warranty: "1 Year",
+        category: "Smartphones",
+        sellingPrice: 129900,
+      },
+      {
+        name: "AirPods Pro (2nd Gen)",
+        color: "White",
+        warranty: "1 Year",
+        category: "Audio",
+        sellingPrice: 24900,
+      },
+      {
+        name: "Samsung Galaxy S24 Ultra",
+        color: "Titanium Black",
+        warranty: "1 Year",
+        category: "Smartphones",
+        sellingPrice: 145000,
+      },
+      {
+        name: "MacBook Air M3",
+        color: "Midnight",
+        warranty: "1 Year",
+        category: "Laptops",
+        sellingPrice: 175000,
+      },
+      {
+        name: "iPad Pro 12.9",
+        color: "Space Gray",
+        warranty: "1 Year",
+        category: "Tablets",
+        sellingPrice: 95000,
+      },
+    ];
   },
 });
 
-// Example mutation to add a product
+// Add a sample product (used by initialization script)
 export const addProductExample = mutation({
   args: {
     name: v.string(),
@@ -30,45 +55,27 @@ export const addProductExample = mutation({
     sellingPrice: v.number(),
   },
   handler: async (ctx, args) => {
-    const id = await ctx.db.insert("products", { 
-      name: args.name,
-      color: args.color,
-      warranty: args.warranty,
-      category: args.category,
-      sellingPrice: args.sellingPrice,
+    // Check if product already exists
+    const existing = await ctx.db
+      .query("products")
+      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+
+    if (existing) {
+      // Update existing product
+      await ctx.db.patch(existing._id, {
+        ...args,
+        lastUpdated: Date.now(),
+      });
+      return existing._id;
+    }
+
+    // Insert new product
+    const id = await ctx.db.insert("products", {
+      ...args,
       lastUpdated: Date.now(),
     });
 
-    console.log("Added new product with id:", id);
     return id;
-  },
-});
-
-// Example action to call external APIs
-export const myAction = action({
-  args: {
-    first: v.number(),
-    second: v.string(),
-  },
-  handler: async (ctx, args) => {
-    // Use the browser-like `fetch` API to send HTTP requests.
-    // See https://docs.convex.dev/functions/actions#calling-third-party-apis-and-using-npm-packages.
-    // const response = await ctx.fetch("https://api.thirdpartyservice.com");
-    // const data = await response.json();
-
-    // Query data by running Convex queries.
-    const data = await ctx.runQuery(api.myFunctions.listProductsExample, {
-      limit: 10,
-    });
-    console.log(data);
-
-    // Write data by running Convex mutations.
-    await ctx.runMutation(api.myFunctions.addProductExample, {
-      name: "Example Product",
-      color: "Black",
-      warranty: "1 Year",
-      category: "Electronics",
-      sellingPrice: 1000,
-    });
   },
 });

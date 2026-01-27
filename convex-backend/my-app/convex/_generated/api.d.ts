@@ -9,6 +9,8 @@
  */
 
 import type * as config from "../config.js";
+import type * as conversationState from "../conversationState.js";
+import type * as googleSheets from "../googleSheets.js";
 import type * as invoices from "../invoices.js";
 import type * as myFunctions from "../myFunctions.js";
 import type * as products from "../products.js";
@@ -21,6 +23,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   config: typeof config;
+  conversationState: typeof conversationState;
+  googleSheets: typeof googleSheets;
   invoices: typeof invoices;
   myFunctions: typeof myFunctions;
   products: typeof products;

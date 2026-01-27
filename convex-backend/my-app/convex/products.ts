@@ -3,6 +3,7 @@ import { query, mutation } from "./_generated/server";
 
 // Get all products
 export const list = query({
+  args: {},
   handler: async (ctx) => {
     return await ctx.db.query("products").collect();
   },
@@ -34,11 +35,37 @@ export const search = query({
   },
 });
 
-// Sync products from Google Sheets
-export const syncFromGoogleSheets = mutation({
-  handler: async (ctx) => {
-    // This will be implemented later with Google Sheets API
-    // For now, return a placeholder
-    return { success: false, message: "Google Sheets integration not implemented yet" };
+// Add a new product
+export const addProduct = mutation({
+  args: {
+    name: v.string(),
+    color: v.string(),
+    warranty: v.string(),
+    category: v.string(),
+    sellingPrice: v.number(),
+    lastUpdated: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const id = await ctx.db.insert("products", args);
+    return id;
+  },
+});
+
+// Update an existing product
+export const updateProduct = mutation({
+  args: {
+    productId: v.id("products"),
+    updates: v.object({
+      name: v.optional(v.string()),
+      color: v.optional(v.string()),
+      warranty: v.optional(v.string()),
+      category: v.optional(v.string()),
+      sellingPrice: v.optional(v.number()),
+      lastUpdated: v.optional(v.number()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.productId, args.updates);
+    return await ctx.db.get(args.productId);
   },
 });

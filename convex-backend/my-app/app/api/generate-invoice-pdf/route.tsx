@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Generate PDF using the component directly
+    /* eslint-disable react-hooks/error-boundaries */
     const pdfBlob = await pdf(
       <InvoiceDocument
         invoiceNumber={invoiceNumber}
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
         total={total}
       />
     ).toBlob();
+    /* eslint-enable react-hooks/error-boundaries */
     
     // Convert Blob to ArrayBuffer for NextResponse
     const arrayBuffer = await pdfBlob.arrayBuffer();

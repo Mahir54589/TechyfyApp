@@ -5,7 +5,6 @@ import {
   Document,
   StyleSheet,
   Font,
-  Image,
 } from "@react-pdf/renderer";
 
 // Register fonts (optional, for better typography)
@@ -148,18 +147,21 @@ const styles = StyleSheet.create({
   },
 });
 
-// Company information (will be replaced with actual company data)
+// Company information from environment variables
+// In production, these are set in Vercel environment variables
 const companyInfo = {
-  name: "Your Company Name",
-  address: "Your Address, Bangladesh",
-  email: "contact@yourcompany.com",
-  phone: "+880 1XXX XXXXXX",
-  bin: "BIN: 123456789012",
+  name: process.env.COMPANY_NAME || "Your Company Name",
+  address: process.env.COMPANY_ADDRESS || "Your Address, Dhaka, Bangladesh",
+  email: process.env.COMPANY_EMAIL || "contact@yourcompany.com",
+  phone: process.env.COMPANY_PHONE || "+880 1XXX XXXXXX",
+  bin: process.env.COMPANY_BIN || "BIN: 123456789012",
+  logoUrl: process.env.COMPANY_LOGO_URL,
   paymentDetails: {
-    bKash: "017XXXXXXXX",
-    nagad: "017XXXXXXXX",
-    bankAccount: "Account Name: Your Company, Account Number: XXXXXXXX, Bank: XYZ Bank",
+    bKash: process.env.PAYMENT_BKASH || "017XXXXXXXX",
+    nagad: process.env.PAYMENT_NAGAD || "017XXXXXXXX",
+    bankAccount: process.env.PAYMENT_BANK || "Account Name: Your Company, Account Number: XXXXXXXX, Bank: XYZ Bank",
   },
+  terms: process.env.INVOICE_TERMS,
 };
 
 interface InvoiceDocumentProps {

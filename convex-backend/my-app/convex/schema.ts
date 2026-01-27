@@ -48,4 +48,13 @@ export default defineSchema({
     key: v.string(), // "vatRate", "companyInfo"
     value: v.any(), // JSON object
   }).index("by_key", ["key"]),
+
+  // Conversation states for Telegram bot
+  conversationStates: defineTable({
+    userId: v.number(), // Telegram user ID
+    state: v.string(), // Current conversation state
+    data: v.optional(v.any()), // Additional state data
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 });
