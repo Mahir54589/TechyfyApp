@@ -96,3 +96,6 @@ temp/
 
 # Convex
 convex-backend/my-app/.env.local
+
+# KiloCode MCP configuration
+.kilocode/

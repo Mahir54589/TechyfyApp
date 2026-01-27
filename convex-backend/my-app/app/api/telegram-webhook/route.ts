@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import TelegramBot from "node-telegram-bot-api";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../convex/_generated/api";
 
@@ -7,6 +6,7 @@ import { api } from "../../../convex/_generated/api";
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 // Initialize Telegram Bot
+const TelegramBot = require("node-telegram-bot-api");
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN!);
 
 // Store conversation state (in production, this should be stored in a database)
@@ -150,7 +150,7 @@ const handleMessage = async (msg: any) => {
       
     case ConversationState.AWAITING_PRODUCTS:
       const state = conversationStates.get(chatId);
-      const productNames = text.split(/[,\\n]/).map((p: string) => p.trim()).filter((p: string) => p);
+      const productNames = text.split(/[,\n]/).map((p: string) => p.trim()).filter((p: string) => p);
       
       if (productNames.length === 0) {
         await sendMessage(chatId, "❌ Please provide at least one product name.");
@@ -201,6 +201,12 @@ const handleMessage = async (msg: any) => {
     case ConversationState.AWAITING_QUANTITY:
       const quantityState = conversationStates.get(chatId);
       
+      if (!quantityState || !quantityState.foundProducts) {
+        await sendMessage(chatId, "❌ Error: No products found. Please start over with /start");
+        conversationStates.delete(chatId);
+        return;
+      }
+      
       if (text.toLowerCase() === "ok") {
         // Set default quantity of 1 for all products
         quantityState.quantities = quantityState.foundProducts.map((_: any, index: number) => ({
@@ -209,7 +215,7 @@ const handleMessage = async (msg: any) => {
         }));
       } else {
         // Parse quantities
-        const quantityMatches = text.match(/(\\d+)\\s*=\\s*(\\d+)/g);
+        const quantityMatches = text.match(/(\d+)\s*=\s*(\d+)/g);
         if (!quantityMatches) {
           await sendMessage(chatId,
             "❌ Invalid format. Use: 1=2, 2=1 (product number = quantity)\n" +
@@ -234,6 +240,18 @@ const handleMessage = async (msg: any) => {
       let subtotal = 0;
       let summary = "📋 *Invoice Summary*\n━━━━━━━━━━━━━━━━━━\n";
       
+      // Check if all products exist before proceeding
+      for (let i = 0; i < quantityState.quantities.length; i++) {
+        const item = quantityState.quantities[i];
+        const product = quantityState.foundProducts[item.productIndex];
+        if (!product) {
+          await sendMessage(chatId, `❌ Error: Product not found for item ${i + 1}. Please start over with /start`);
+          conversationStates.delete(chatId);
+          return;
+        }
+      }
+      
+      // Now safely calculate totals
       quantityState.quantities.forEach((item: any, index: number) => {
         const product = quantityState.foundProducts[item.productIndex];
         const amount = product.sellingPrice * item.quantity;
@@ -269,6 +287,12 @@ const handleMessage = async (msg: any) => {
     case ConversationState.AWAITING_CONFIRMATION:
       const confirmationState = conversationStates.get(chatId);
       
+      if (!confirmationState) {
+        await sendMessage(chatId, "❌ Error: No invoice data found. Please start over with /start");
+        conversationStates.delete(chatId);
+        return;
+      }
+      
       if (text.toLowerCase() === "ok") {
         try {
           // Create invoice in Convex
@@ -296,6 +320,11 @@ const handleMessage = async (msg: any) => {
             total: confirmationState.total,
           });
           
+          if (!invoice) {
+            await sendMessage(chatId, "❌ Failed to create invoice. Please try again.");
+            return;
+          }
+          
           await sendMessage(chatId, "⏳ Generating invoice...");
           
           // Generate PDF
@@ -322,7 +351,7 @@ const handleMessage = async (msg: any) => {
         }
       } else {
         // Try to parse price edit
-        const priceEditMatch = text.match(/(\\d+)\\s+(\\d+)/);
+        const priceEditMatch = text.match(/(\d+)\s+(\d+)/);
         if (priceEditMatch) {
           const [_, itemIndex, newPrice] = priceEditMatch;
           const index = parseInt(itemIndex) - 1; // Convert to 0-based index

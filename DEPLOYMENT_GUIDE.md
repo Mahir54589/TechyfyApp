@@ -2,7 +2,7 @@
 
 ## Current Status
 
-✅ **Convex Backend**: Successfully deployed to https://beaming-giraffe-510.convex.cloud
+✅ **Convex Backend**: Successfully deployed to https://your-convex-deployment.convex.cloud
 ⏳ **Next.js Frontend**: Ready to deploy to Vercel
 ⏳ **Environment Variables**: Need to be configured in Vercel
 
@@ -26,8 +26,8 @@
 4. **Add Environment Variables**
    Go to "Environment Variables" section and add these variables:
    ```
-   NEXT_PUBLIC_CONVEX_URL=https://beaming-giraffe-510.convex.cloud
-   CONVEX_DEPLOYMENT=beaming-giraffe-510
+   NEXT_PUBLIC_CONVEX_URL=https://your-convex-deployment.convex.cloud
+   CONVEX_DEPLOYMENT=your-convex-deployment-id
    ```
    Add any other environment variables your application needs from your `.env.local` file
 
@@ -103,7 +103,7 @@ After deployment, your application will be available at:
 ### Environment Variable Issues:
 
 1. **Variables Not Loading**: Make sure your environment variables are set in Vercel dashboard
-2. **Convex Connection Issues**: Verify that `NEXT_PUBLIC_CONVEX_URL` is set to `https://beaming-giraffe-510.convex.cloud`
+2. **Convex Connection Issues**: Verify that `NEXT_PUBLIC_CONVEX_URL` is set to your actual Convex deployment URL
 
 ## Security Notes
 
