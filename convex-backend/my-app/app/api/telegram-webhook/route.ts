@@ -329,7 +329,7 @@ const handleMessage = async (msg: any) => {
           
           // Generate PDF
           const pdfResult = await convex.action(api.invoices.generatePDF, {
-            invoiceId: invoice._id,
+            invoiceId: invoice!._id,
           });
           
           if (pdfResult.success) {
