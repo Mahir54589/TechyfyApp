@@ -1,0 +1,40 @@
+{
+  "name": "my-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:frontend dev:backend",
+    "dev:frontend": "next dev",
+    "dev:backend": "convex dev",
+    "predev": "convex dev --until-success && convex dashboard",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --ignore-pattern \"convex/_generated/**\"",
+    "init": "npx tsx scripts/initialize.ts",
+    "deploy:convex": "bash scripts/deploy-convex.sh",
+    "deploy:vercel": "bash scripts/deploy-vercel.sh"
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "^4.3.2",
+    "convex": "^1.31.6",
+    "next": "16.1.5",
+    "node-telegram-bot-api": "^0.67.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@convex-dev/eslint-plugin": "^1.1.1",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^24.10.9",
+    "@types/node-telegram-bot-api": "^0.64.13",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "16.1.5",
+    "npm-run-all2": "^8.0.4",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.1.18",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
