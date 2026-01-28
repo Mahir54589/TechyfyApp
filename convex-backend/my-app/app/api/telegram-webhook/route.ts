@@ -497,9 +497,7 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
           ...stateData,
           discountNet,
           subtotal,
-          taxRate,
-          taxAmount,
-          total,
+          total: grandTotal,
         },
       });
       break;
