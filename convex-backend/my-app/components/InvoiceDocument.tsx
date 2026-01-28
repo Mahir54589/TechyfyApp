@@ -8,28 +8,28 @@ import {
   Font,
 } from "@react-pdf/renderer";
 
-// Register Inter font using TTF format from jsDelivr CDN (GitHub raw)
+// Register Inter font using local TTF files
 Font.register({
   family: "Inter",
-  src: "https://cdn.jsdelivr.net/gh/rsms/inter@master/docs/font-files/Inter-Regular.ttf",
+  src: "/fonts/Inter-Regular.ttf",
   fontWeight: 400,
 });
 
 Font.register({
   family: "Inter",
-  src: "https://cdn.jsdelivr.net/gh/rsms/inter@master/docs/font-files/Inter-Medium.ttf",
+  src: "/fonts/Inter-Medium.ttf",
   fontWeight: 500,
 });
 
 Font.register({
   family: "Inter",
-  src: "https://cdn.jsdelivr.net/gh/rsms/inter@master/docs/font-files/Inter-SemiBold.ttf",
+  src: "/fonts/Inter-SemiBold.ttf",
   fontWeight: 600,
 });
 
 Font.register({
   family: "Inter",
-  src: "https://cdn.jsdelivr.net/gh/rsms/inter@master/docs/font-files/Inter-Bold.ttf",
+  src: "/fonts/Inter-Bold.ttf",
   fontWeight: 700,
 });
 
