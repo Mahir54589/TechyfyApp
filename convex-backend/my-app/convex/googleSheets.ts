@@ -23,6 +23,24 @@ interface GoogleSheetProduct {
   sellingPrice: number;
 }
 
+// Debug: Check environment variables
+export const debugEnvVars = query({
+  args: {},
+  handler: async (ctx) => {
+    const config = getGoogleSheetsConfig();
+    return {
+      hasClientEmail: !!config.GOOGLE_SHEETS_CLIENT_EMAIL,
+      hasPrivateKey: !!config.GOOGLE_SHEETS_PRIVATE_KEY,
+      hasSheetId: !!config.GOOGLE_SHEET_ID,
+      clientEmailLength: config.GOOGLE_SHEETS_CLIENT_EMAIL?.length || 0,
+      privateKeyLength: config.GOOGLE_SHEETS_PRIVATE_KEY?.length || 0,
+      sheetIdLength: config.GOOGLE_SHEET_ID?.length || 0,
+      clientEmailPreview: config.GOOGLE_SHEETS_CLIENT_EMAIL?.substring(0, 20) || null,
+      sheetIdPreview: config.GOOGLE_SHEET_ID?.substring(0, 20) || null,
+    };
+  },
+});
+
 // Get sync status
 export const getSyncStatus = query({
   args: {},
