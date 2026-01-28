@@ -5,10 +5,10 @@ import { api } from "./_generated/api";
 // Helper to get env vars inside handler (Convex requirement)
 function getGoogleSheetsConfig() {
   const GOOGLE_SHEETS_CLIENT_EMAIL = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
-  const GOOGLE_SHEETS_PRIVATE_KEY = process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(
-    /\\n/g,
-    "\n"
-  );
+  // Handle both actual newlines and \n escape sequences
+  const GOOGLE_SHEETS_PRIVATE_KEY = process.env.GOOGLE_SHEETS_PRIVATE_KEY
+    ?.replace(/\\n/g, "\n")  // Convert \n to actual newlines
+    ?.replace(/\r\n/g, "\n"); // Normalize Windows line endings
   const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
   
   return { GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY, GOOGLE_SHEET_ID };
@@ -298,19 +298,54 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
     .replace(/-----END PRIVATE KEY-----/g, "")
     .replace(/\s/g, "");
   
-  const binaryString = atob(b64);
+  return base64Decode(b64).buffer as ArrayBuffer;
+}
+
+// Base64 encoding/decoding using Uint8Array
+function base64Decode(str: string): Uint8Array {
+  const binaryString = atob(str);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
-  return bytes.buffer;
+  return bytes;
 }
 
-// Helper function for base64 decoding (for atob)
+function base64Encode(bytes: Uint8Array): string {
+  let binaryString = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binaryString += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binaryString);
+}
+
+// Helper function for base64 decoding (for atob compatibility)
 function atob(str: string): string {
-  return Buffer.from(str, "base64").toString("binary");
+  // Use built-in if available, otherwise polyfill
+  if (typeof globalThis.atob === "function") {
+    return globalThis.atob(str);
+  }
+  // Fallback polyfill
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let output = "";
+  str = String(str).replace(/=+$/, "");
+  for (let bc = 0, bs = 0, buffer, idx = 0; (buffer = str.charAt(idx++)); ~buffer && (bs = bc % 4 ? bs * 64 + buffer : buffer, bc++ % 4) ? output += String.fromCharCode(255 & bs >> (-2 * bc & 6)) : 0) {
+    buffer = chars.indexOf(buffer);
+  }
+  return output;
 }
 
 function btoa(str: string): string {
-  return Buffer.from(str, "binary").toString("base64");
+  // Use built-in if available, otherwise polyfill
+  if (typeof globalThis.btoa === "function") {
+    return globalThis.btoa(str);
+  }
+  // Fallback polyfill
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let output = "";
+  for (let block = 0, charCode, idx = 0, map = chars; str.charAt(idx | 0) || (map = "=", idx % 1); output += map.charAt(63 & block >> 8 - idx % 1 * 8)) {
+    charCode = str.charCodeAt(idx += 3 / 4);
+    block = block << 8 | charCode;
+  }
+  return output;
 }
