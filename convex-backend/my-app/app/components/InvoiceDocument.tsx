@@ -5,39 +5,15 @@ import {
   View,
   Document,
   StyleSheet,
-  Font,
 } from "@react-pdf/renderer";
 
-// Register fonts using reliable TTF sources
-Font.register({
-  family: "Inter",
-  fonts: [
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-400-normal.woff2",
-      fontWeight: 400,
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-500-normal.woff2",
-      fontWeight: 500,
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-600-normal.woff2",
-      fontWeight: 600,
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-700-normal.woff2",
-      fontWeight: 700,
-    },
-  ],
-});
-
-// Fallback to Helvetica if Inter fails to load
-Font.registerHyphenationCallback((word) => [word]);
+// Use Helvetica (built into @react-pdf/renderer)
+// No external font registration needed
 
 // Styles based on exact .pen file specifications
 const styles = StyleSheet.create({
   page: {
-    fontFamily: "Inter",
+    fontFamily: "Helvetica",
     backgroundColor: "#FFFFFF",
     paddingTop: 80,
     paddingBottom: 80,
@@ -47,7 +23,7 @@ const styles = StyleSheet.create({
   // Invoice Title
   invoiceTitle: {
     fontSize: 87,
-    fontWeight: 700,
+    fontWeight: "bold",
     color: "#000000",
     marginTop: 66,
     marginBottom: 40,
@@ -63,14 +39,14 @@ const styles = StyleSheet.create({
   },
   invoiceLabel: {
     fontSize: 30,
-    fontWeight: 500,
+    fontWeight: "medium",
     color: "#333333",
     width: 172,
     textAlign: "center",
   },
   invoiceValue: {
     fontSize: 30,
-    fontWeight: 600,
+    fontWeight: "bold",
     color: "#000000",
     marginLeft: 20,
   },
@@ -88,7 +64,7 @@ const styles = StyleSheet.create({
   },
   billingTitle: {
     fontSize: 28,
-    fontWeight: 500,
+    fontWeight: "medium",
     color: "#000000",
     marginBottom: 20,
   },
@@ -105,7 +81,6 @@ const styles = StyleSheet.create({
   // Description Label
   descriptionLabel: {
     fontSize: 24,
-    fontWeight: 400,
     color: "#2f2f2f",
     marginBottom: 15,
   },
@@ -119,7 +94,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     fontSize: 25,
-    fontWeight: 600,
+    fontWeight: "bold",
     color: "#000000",
     textAlign: "center",
   },
@@ -133,7 +108,6 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     fontSize: 25,
-    fontWeight: 400,
     color: "#333333",
     textAlign: "center",
   },
@@ -160,7 +134,6 @@ const styles = StyleSheet.create({
   },
   totalsLabel: {
     fontSize: 20,
-    fontWeight: 400,
     color: "#333333",
   },
   totalsValue: {
@@ -177,11 +150,12 @@ const styles = StyleSheet.create({
   },
   grandTotalLabel: {
     fontSize: 25,
+    fontWeight: "bold",
     color: "#000000",
   },
   grandTotalValue: {
     fontSize: 22,
-    fontWeight: 600,
+    fontWeight: "bold",
     color: "#000000",
     textAlign: "right",
     width: 150,
@@ -193,13 +167,12 @@ const styles = StyleSheet.create({
   },
   termsTitle: {
     fontSize: 24,
-    fontWeight: 600,
+    fontWeight: "bold",
     color: "#000000",
     marginBottom: 20,
   },
   termText: {
     fontSize: 18,
-    fontWeight: 400,
     color: "#333333",
     lineHeight: 1.6,
     marginBottom: 8,
@@ -207,7 +180,6 @@ const styles = StyleSheet.create({
   // Footer
   footerNote: {
     fontSize: 15,
-    fontWeight: 400,
     color: "#999999",
     textAlign: "center",
     letterSpacing: 5,
