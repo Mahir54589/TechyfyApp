@@ -171,6 +171,10 @@ const styles = StyleSheet.create({
     fontSize: 7,
     color: "#999999",
     textAlign: "center",
+    position: "absolute",
+    bottom: 40,
+    left: 40,
+    right: 40,
   },
 });
 
