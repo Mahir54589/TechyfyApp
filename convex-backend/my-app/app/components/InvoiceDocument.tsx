@@ -61,12 +61,12 @@ const styles = StyleSheet.create({
   billingName: {
     fontSize: 11,
     color: "#000000",
-    marginBottom: 8,
+    marginBottom: 5,
   },
   billingAddress: {
     fontSize: 11,
     color: "#333333",
-    marginBottom: 8,
+    marginBottom: 5,
     lineHeight: 1.4,
   },
   billingPhone: {
