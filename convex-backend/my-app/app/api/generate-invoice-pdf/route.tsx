@@ -1,7 +1,7 @@
 import React from "react";
 import { NextRequest, NextResponse } from "next/server";
 import { pdf } from "@react-pdf/renderer";
-import InvoiceDocument from "../../../components/InvoiceDocument";
+import InvoiceDocument from "../../components/InvoiceDocument";
 
 export async function POST(request: NextRequest) {
   try {
