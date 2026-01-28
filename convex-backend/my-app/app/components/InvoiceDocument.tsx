@@ -7,54 +7,50 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 
-// Use Helvetica (built into @react-pdf/renderer)
-// No external font registration needed
-
-// Styles based on exact .pen file specifications
+// Scaled down font sizes to fit A4 (react-pdf uses 72 DPI)
+// Original .pen sizes were for 96 DPI, scaling factor ~0.75
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
     backgroundColor: "#FFFFFF",
-    paddingTop: 80,
-    paddingBottom: 80,
-    paddingLeft: 113,
-    paddingRight: 113,
+    paddingTop: 60,
+    paddingBottom: 60,
+    paddingLeft: 50,
+    paddingRight: 50,
   },
-  // Invoice Title
+  // Invoice Title - scaled from 87 to 65
   invoiceTitle: {
-    fontSize: 87,
+    fontSize: 65,
     fontWeight: "bold",
     color: "#000000",
-    marginTop: 66,
-    marginBottom: 40,
+    marginBottom: 25,
   },
-  // Invoice Info Section
+  // Invoice Info Section - scaled from 30 to 22
   invoiceInfo: {
-    marginBottom: 30,
+    marginBottom: 20,
   },
   invoiceRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   invoiceLabel: {
-    fontSize: 30,
+    fontSize: 22,
     fontWeight: "medium",
     color: "#333333",
-    width: 172,
-    textAlign: "center",
+    width: 130,
   },
   invoiceValue: {
-    fontSize: 30,
+    fontSize: 22,
     fontWeight: "bold",
     color: "#000000",
-    marginLeft: 20,
+    marginLeft: 10,
   },
-  // Billing Section
+  // Billing Section - scaled from 28 to 21
   billingContainer: {
     flexDirection: "row",
-    marginTop: 40,
-    marginBottom: 50,
+    marginTop: 25,
+    marginBottom: 30,
   },
   billToSection: {
     width: "50%",
@@ -63,51 +59,52 @@ const styles = StyleSheet.create({
     width: "50%",
   },
   billingTitle: {
-    fontSize: 28,
+    fontSize: 21,
     fontWeight: "medium",
-    color: "#000000",
-    marginBottom: 20,
-  },
-  billingName: {
-    fontSize: 28,
-    color: "#000000",
+    color: "#666666",
     marginBottom: 10,
   },
-  billingText: {
-    fontSize: 28,
-    color: "#333333",
+  billingName: {
+    fontSize: 21,
+    fontWeight: "bold",
+    color: "#000000",
     marginBottom: 5,
   },
-  // Description Label
-  descriptionLabel: {
-    fontSize: 24,
-    color: "#2f2f2f",
-    marginBottom: 15,
+  billingText: {
+    fontSize: 21,
+    color: "#333333",
+    marginBottom: 3,
   },
-  // Table Styles
+  // Description Label - scaled from 24 to 18
+  descriptionLabel: {
+    fontSize: 18,
+    color: "#666666",
+    marginBottom: 10,
+  },
+  // Table Styles - scaled from 25 to 19
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#E8E8E8",
-    height: 62,
+    height: 45,
     alignItems: "center",
-    paddingHorizontal: 22,
+    paddingHorizontal: 15,
   },
   tableHeaderText: {
-    fontSize: 25,
+    fontSize: 19,
     fontWeight: "bold",
     color: "#000000",
     textAlign: "center",
   },
   tableRow: {
     flexDirection: "row",
-    height: 40,
+    height: 32,
     alignItems: "center",
-    paddingHorizontal: 22,
+    paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: "#E8E8E8",
   },
   tableCell: {
-    fontSize: 25,
+    fontSize: 19,
     color: "#333333",
     textAlign: "center",
   },
@@ -120,24 +117,23 @@ const styles = StyleSheet.create({
   colAmount: { width: "18%" },
   // Totals Section
   totalsContainer: {
-    marginTop: 60,
+    marginTop: 30,
     alignItems: "flex-end",
   },
   totalsSection: {
-    width: 320,
+    width: 250,
   },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
-    paddingHorizontal: 11,
+    marginBottom: 5,
   },
   totalsLabel: {
-    fontSize: 20,
+    fontSize: 16,
     color: "#333333",
   },
   totalsValue: {
-    fontSize: 20,
+    fontSize: 16,
     color: "#000000",
     textAlign: "right",
   },
@@ -145,44 +141,42 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     backgroundColor: "#E8E8E8",
-    padding: 12,
+    padding: 10,
     marginTop: 5,
   },
   grandTotalLabel: {
-    fontSize: 25,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#000000",
   },
   grandTotalValue: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#000000",
     textAlign: "right",
-    width: 150,
   },
-  // Terms Section
+  // Terms Section - scaled from 24/18 to 18/14
   termsSection: {
-    marginTop: 80,
-    marginBottom: 120,
+    marginTop: 40,
+    marginBottom: 50,
   },
   termsTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#000000",
-    marginBottom: 20,
+    marginBottom: 12,
   },
   termText: {
-    fontSize: 18,
+    fontSize: 14,
     color: "#333333",
-    lineHeight: 1.6,
-    marginBottom: 8,
+    lineHeight: 1.5,
+    marginBottom: 6,
   },
-  // Footer
+  // Footer - scaled from 15 to 11
   footerNote: {
-    fontSize: 15,
+    fontSize: 11,
     color: "#999999",
     textAlign: "center",
-    letterSpacing: 5,
   },
 });
 
@@ -235,8 +229,9 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({
   deliveryCharge,
   grandTotal,
 }) => {
+  // Use "Tk" instead of ৳ since Helvetica doesn't support Bengali characters
   const formatCurrency = (amount: number) => {
-    return `৳ ${amount.toLocaleString("en-IN", {
+    return `Tk ${amount.toLocaleString("en-IN", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
@@ -253,7 +248,7 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({
             <Text style={styles.invoiceValue}>{invoiceNumber}</Text>
           </View>
           <View style={styles.invoiceRow}>
-            <Text style={styles.invoiceLabel}>Date            :  </Text>
+            <Text style={styles.invoiceLabel}>Date :</Text>
             <Text style={styles.invoiceValue}>{date}</Text>
           </View>
         </View>
