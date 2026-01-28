@@ -1,3 +1,4 @@
+import React from "react";
 import {
   Page,
   Text,
@@ -7,28 +8,28 @@ import {
   Font,
 } from "@react-pdf/renderer";
 
-// Register Inter font
+// Register Inter font using TTF format from jsDelivr CDN (GitHub raw)
 Font.register({
   family: "Inter",
-  src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2",
+  src: "https://cdn.jsdelivr.net/gh/rsms/inter@master/docs/font-files/Inter-Regular.ttf",
   fontWeight: 400,
 });
 
 Font.register({
   family: "Inter",
-  src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
+  src: "https://cdn.jsdelivr.net/gh/rsms/inter@master/docs/font-files/Inter-Medium.ttf",
   fontWeight: 500,
 });
 
 Font.register({
   family: "Inter",
-  src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
+  src: "https://cdn.jsdelivr.net/gh/rsms/inter@master/docs/font-files/Inter-SemiBold.ttf",
   fontWeight: 600,
 });
 
 Font.register({
   family: "Inter",
-  src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
+  src: "https://cdn.jsdelivr.net/gh/rsms/inter@master/docs/font-files/Inter-Bold.ttf",
   fontWeight: 700,
 });
 
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     fontSize: 12,
-    fontWeight: 600,
+    fontWeight: 700,
     color: "#000000",
   },
   tableRow: {
@@ -197,12 +198,12 @@ const styles = StyleSheet.create({
   },
   grandTotalLabel: {
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 700,
     color: "#000000",
   },
   grandTotalValue: {
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 700,
     color: "#000000",
   },
   termsSection: {
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
   },
   termsTitle: {
     fontSize: 13,
-    fontWeight: 600,
+    fontWeight: 700,
     color: "#000000",
     marginBottom: 16,
   },
