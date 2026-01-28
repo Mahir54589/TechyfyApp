@@ -90,7 +90,8 @@ export const syncFromGoogleSheets = action({
     try {
       // Fetch data from Google Sheets
       // Sheet format: A=Model, B=Selling Price, C=Warranty, D=Color, E=Type
-      const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/Sheet1!A2:E`;
+      // Tab name: ProductsDatabase, Data starts from row 3 (row 2 has headers)
+      const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/ProductsDatabase!A3:E`;
       
       // Get OAuth token
       const token = await getGoogleAccessToken(GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY);
