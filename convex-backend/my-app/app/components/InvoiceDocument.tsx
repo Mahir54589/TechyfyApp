@@ -7,7 +7,6 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 
-// Much smaller font sizes to fit A4 (react-pdf uses 72 DPI)
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
@@ -17,14 +16,12 @@ const styles = StyleSheet.create({
     paddingLeft: 40,
     paddingRight: 40,
   },
-  // Invoice Title
   invoiceTitle: {
     fontSize: 32,
     fontWeight: "bold",
     color: "#000000",
     marginBottom: 15,
   },
-  // Invoice Info Section
   invoiceInfo: {
     marginBottom: 15,
   },
@@ -43,7 +40,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000000",
   },
-  // Billing Section
   billingContainer: {
     flexDirection: "row",
     marginTop: 20,
@@ -71,13 +67,11 @@ const styles = StyleSheet.create({
     color: "#333333",
     marginBottom: 2,
   },
-  // Description Label
   descriptionLabel: {
     fontSize: 10,
     color: "#666666",
     marginBottom: 8,
   },
-  // Table Styles
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#E8E8E8",
@@ -104,20 +98,22 @@ const styles = StyleSheet.create({
     color: "#333333",
     textAlign: "center",
   },
-  // Column widths
+  // Column widths - adjusted for alignment
   colSlNo: { width: "8%" },
   colItemName: { width: "32%", textAlign: "left" },
   colQuantity: { width: "12%" },
-  colRate: { width: "15%" },
-  colDiscount: { width: "15%" },
-  colAmount: { width: "18%" },
-  // Totals Section
+  colRate: { width: "16%", textAlign: "right" },
+  colDiscount: { width: "16%", textAlign: "right" },
+  colAmount: { width: "16%", textAlign: "right" },
+  // Totals Section - aligned with table amount column
   totalsContainer: {
     marginTop: 20,
     alignItems: "flex-end",
   },
+  // Extended width to align with table
   totalsSection: {
-    width: 180,
+    width: "36%", // Aligns with rate+discount+amount columns
+    paddingRight: 10, // Match table padding
   },
   totalsRow: {
     flexDirection: "row",
@@ -133,12 +129,16 @@ const styles = StyleSheet.create({
     color: "#000000",
     textAlign: "right",
   },
+  // Grand total row with extended background
   grandTotalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     backgroundColor: "#E8E8E8",
-    padding: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10, // Extended to match table padding
     marginTop: 4,
+    marginLeft: -10, // Extend left
+    marginRight: -10, // Extend right
   },
   grandTotalLabel: {
     fontSize: 10,
@@ -151,7 +151,6 @@ const styles = StyleSheet.create({
     color: "#000000",
     textAlign: "right",
   },
-  // Terms Section
   termsSection: {
     marginTop: 25,
     marginBottom: 30,
@@ -168,7 +167,6 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
     marginBottom: 4,
   },
-  // Footer
   footerNote: {
     fontSize: 7,
     color: "#999999",
@@ -176,14 +174,12 @@ const styles = StyleSheet.create({
   },
 });
 
-// Company information
 const companyInfo = {
   name: "Techyfy",
   address: "Muradpur, Chittagong 4211",
   phone: "01882771113",
 };
 
-// Terms and conditions
 const termsAndConditions = [
   "1. The products under warranty (invoice, box, serial number, and warranty sticker must all be kept intact) will be repaired or replaced by the supplier.",
   "2. Time taken for the warranty process will be controlled by the supplier.",
@@ -225,11 +221,20 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({
   deliveryCharge,
   grandTotal,
 }) => {
-  const formatCurrency = (amount: number) => {
-    return `Tk ${amount.toLocaleString("en-IN", {
+  // Format number without Tk prefix for table cells
+  const formatNumber = (amount: number) => {
+    return `${amount.toLocaleString("en-IN", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+  };
+
+  // Format with Tk suffix for display
+  const formatCurrency = (amount: number) => {
+    return `${amount.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} Tk`;
   };
 
   return (
@@ -280,9 +285,9 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({
             <Text style={[styles.tableCell, styles.colSlNo]}>{item.slNo}</Text>
             <Text style={[styles.tableCell, styles.colItemName]}>{item.itemName}</Text>
             <Text style={[styles.tableCell, styles.colQuantity]}>{item.quantity}</Text>
-            <Text style={[styles.tableCell, styles.colRate]}>{formatCurrency(item.rate)}</Text>
-            <Text style={[styles.tableCell, styles.colDiscount]}>{formatCurrency(item.discountRow)}</Text>
-            <Text style={[styles.tableCell, styles.colAmount]}>{formatCurrency(item.amount)}</Text>
+            <Text style={[styles.tableCell, styles.colRate]}>{formatNumber(item.rate)}</Text>
+            <Text style={[styles.tableCell, styles.colDiscount]}>{formatNumber(item.discountRow)}</Text>
+            <Text style={[styles.tableCell, styles.colAmount]}>{formatNumber(item.amount)}</Text>
           </View>
         ))}
 
