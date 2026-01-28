@@ -145,10 +145,12 @@ export const syncFromGoogleSheets = action({
           continue;
         }
 
-        const price = parseFloat(row[1]);
+        // Clean price: remove currency symbols (৳), commas, and whitespace
+        const priceString = row[1].replace(/[৳,\s]/g, "");
+        const price = parseFloat(priceString);
         if (isNaN(price) || price < 0) {
-          errors.push(`Row ${i + 2}: Invalid price "${row[1]}"`);
-          console.log(`Row ${i + 2}: Skipping - invalid price "${row[1]}"`);
+          errors.push(`Row ${i + 2}: Invalid price "${row[1]}" (cleaned: "${priceString}")`);
+          console.log(`Row ${i + 2}: Skipping - invalid price "${row[1]}" (cleaned: "${priceString}")`);
           continue;
         }
 
