@@ -2,13 +2,17 @@ import { v } from "convex/values";
 import { query, action } from "./_generated/server";
 import { api } from "./_generated/api";
 
-// Google Sheets configuration from environment variables
-const GOOGLE_SHEETS_CLIENT_EMAIL = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
-const GOOGLE_SHEETS_PRIVATE_KEY = process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(
-  /\\n/g,
-  "\n"
-);
-const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
+// Helper to get env vars inside handler (Convex requirement)
+function getGoogleSheetsConfig() {
+  const GOOGLE_SHEETS_CLIENT_EMAIL = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
+  const GOOGLE_SHEETS_PRIVATE_KEY = process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(
+    /\\n/g,
+    "\n"
+  );
+  const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
+  
+  return { GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY, GOOGLE_SHEET_ID };
+}
 
 // Interface for product data from Google Sheets
 interface GoogleSheetProduct {
@@ -46,8 +50,16 @@ export const syncFromGoogleSheets = action({
     errors: v.optional(v.array(v.string())),
   }),
   handler: async (ctx) => {
+    // Get environment variables inside handler (Convex requirement)
+    const { GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY, GOOGLE_SHEET_ID } = getGoogleSheetsConfig();
+    
     // Check environment variables
     if (!GOOGLE_SHEETS_CLIENT_EMAIL || !GOOGLE_SHEETS_PRIVATE_KEY || !GOOGLE_SHEET_ID) {
+      console.error("Missing env vars:", { 
+        hasClientEmail: !!GOOGLE_SHEETS_CLIENT_EMAIL, 
+        hasPrivateKey: !!GOOGLE_SHEETS_PRIVATE_KEY, 
+        hasSheetId: !!GOOGLE_SHEET_ID 
+      });
       return {
         success: false,
         message: "Google Sheets credentials not configured. Please set environment variables.",
@@ -58,11 +70,12 @@ export const syncFromGoogleSheets = action({
     }
 
     try {
-      // Get OAuth token using JWT
-      const token = await getGoogleAccessToken();
-
       // Fetch data from Google Sheets
+      // Sheet format: A=Model, B=Selling Price, C=Warranty, D=Color, E=Type
       const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/Sheet1!A2:E`;
+      
+      // Get OAuth token
+      const token = await getGoogleAccessToken(GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY);
       
       const response = await fetch(sheetUrl, {
         headers: {
@@ -99,24 +112,25 @@ export const syncFromGoogleSheets = action({
         // Skip empty rows
         if (!row[0]) continue;
 
-        // Validate required fields
-        if (!row[0] || row[4] === undefined || row[4] === null) {
-          errors.push(`Row ${i + 2}: Missing required fields (name or price)`);
+        // Validate required fields (Model and Selling Price)
+        if (!row[0] || row[1] === undefined || row[1] === null) {
+          errors.push(`Row ${i + 2}: Missing required fields (model or selling price)`);
           continue;
         }
 
-        const price = parseFloat(row[4]);
+        const price = parseFloat(row[1]);
         if (isNaN(price) || price < 0) {
-          errors.push(`Row ${i + 2}: Invalid price "${row[4]}"`);
+          errors.push(`Row ${i + 2}: Invalid price "${row[1]}"`);
           continue;
         }
 
+        // Sheet format: A=Model, B=Selling Price, C=Warranty, D=Color, E=Type
         products.push({
-          name: row[0]?.trim() || "",
-          color: row[1]?.trim() || "",
-          warranty: row[2]?.trim() || "",
-          category: row[3]?.trim() || "",
-          sellingPrice: price,
+          name: row[0]?.trim() || "",           // Model → name
+          sellingPrice: price,                   // Selling Price
+          warranty: row[2]?.trim() || "",       // Warranty
+          color: row[3]?.trim() || "",          // Color
+          category: row[4]?.trim() || "",       // Type → category
         });
       }
 
@@ -191,13 +205,13 @@ export const syncFromGoogleSheets = action({
 });
 
 // Helper function to get Google OAuth access token
-async function getGoogleAccessToken(): Promise<string> {
+async function getGoogleAccessToken(clientEmail: string, privateKey: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const expiry = now + 3600; // 1 hour
 
   // Create JWT claims
   const claims = {
-    iss: GOOGLE_SHEETS_CLIENT_EMAIL,
+    iss: clientEmail,
     scope: "https://www.googleapis.com/auth/spreadsheets.readonly",
     aud: "https://oauth2.googleapis.com/token",
     exp: expiry,
@@ -213,9 +227,6 @@ async function getGoogleAccessToken(): Promise<string> {
   const payload = encodeBase64(JSON.stringify(claims));
   const signingInput = `${header}.${payload}`;
 
-  // Sign with private key (using Web Crypto API)
-  const privateKey = GOOGLE_SHEETS_PRIVATE_KEY!;
-  
   // Import the private key
   const cryptoKey = await crypto.subtle.importKey(
     "pkcs8",
