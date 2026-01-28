@@ -60,7 +60,6 @@ const styles = StyleSheet.create({
   },
   billingName: {
     fontSize: 11,
-    fontWeight: "bold",
     color: "#000000",
     marginBottom: 3,
   },

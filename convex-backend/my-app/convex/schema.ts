@@ -33,6 +33,8 @@ export default defineSchema({
     subtotal: v.number(),
     taxRate: v.number(), // 0.15 for 15% VAT (Bangladesh standard)
     taxAmount: v.number(),
+    discountNet: v.optional(v.number()), // Flat discount amount
+    deliveryCharge: v.optional(v.number()), // Delivery charge
     total: v.number(),
     pdfUrl: v.optional(v.string()),
   }).index("by_invoiceNumber", ["invoiceNumber"]).index("by_date", ["date"]),

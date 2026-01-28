@@ -25,6 +25,8 @@ type Invoice = {
   subtotal: number;
   taxRate: number;
   taxAmount: number;
+  discountNet?: number;
+  deliveryCharge?: number;
   total: number;
   pdfUrl?: string;
 };
@@ -76,6 +78,8 @@ export const create = mutation({
     subtotal: v.number(),
     taxRate: v.number(),
     taxAmount: v.number(),
+    discountNet: v.optional(v.number()),
+    deliveryCharge: v.optional(v.number()),
     total: v.number(),
   },
   handler: async (ctx, args) => {
@@ -148,6 +152,8 @@ export const create = mutation({
       subtotal: args.subtotal,
       taxRate: args.taxRate,
       taxAmount: args.taxAmount,
+      discountNet: args.discountNet,
+      deliveryCharge: args.deliveryCharge,
       total: args.total,
     });
     
@@ -188,10 +194,10 @@ export const generatePDF = action({
         amount: item.amount,
       }));
       
-      // Calculate totals (for now, no discount, no delivery charge)
+      // Calculate totals using stored values
       const netTotal = invoice.subtotal;
-      const discountNet = 0;
-      const deliveryCharge = 0;
+      const discountNet = invoice.discountNet || 0;
+      const deliveryCharge = invoice.deliveryCharge || 0;
       const grandTotal = invoice.total;
       
       // Format date as DD-MM-YYYY

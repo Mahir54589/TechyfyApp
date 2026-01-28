@@ -60,7 +60,7 @@ const validatePhone = (phone: string): boolean => {
 };
 
 // Helper function to parse customer info
-// Format: Name, Address (until . or 01xxxx), Phone
+// Format: Name, Address (until . or 01xxxx or +8801xxxx), Phone
 const parseCustomerInfo = (text: string): CustomerInfo | null => {
   // Find first comma to separate name
   const firstCommaIndex = text.indexOf(',');
@@ -69,8 +69,8 @@ const parseCustomerInfo = (text: string): CustomerInfo | null => {
   const name = text.substring(0, firstCommaIndex).trim();
   const rest = text.substring(firstCommaIndex + 1).trim();
   
-  // Find phone number (starts with 01) or fullstop
-  const phoneMatch = rest.match(/(01\d{9})/);
+  // Find phone number (starts with 01 or +8801)
+  const phoneMatch = rest.match(/((?:\+8801|01)\d{9})/);
   const fullstopIndex = rest.indexOf('.');
   
   let address: string;
@@ -85,13 +85,13 @@ const parseCustomerInfo = (text: string): CustomerInfo | null => {
   } else if (fullstopIndex !== -1) {
     address = rest.substring(0, fullstopIndex).trim();
     const afterFullstop = rest.substring(fullstopIndex + 1).trim();
-    const phoneInRest = afterFullstop.match(/(01\d{9})/);
+    const phoneInRest = afterFullstop.match(/((?:\+8801|01)\d{9})/);
     phone = phoneInRest ? phoneInRest[1] : afterFullstop;
   } else {
-    // Fallback: try to find last 11 digit number as phone
+    // Fallback: try to find last phone number pattern
     const parts = rest.split(/[\s,]+/);
     const lastPart = parts[parts.length - 1];
-    if (/^01\d{9}$/.test(lastPart)) {
+    if (/^(?:\+8801|01)\d{9}$/.test(lastPart)) {
       phone = lastPart;
       address = parts.slice(0, -1).join(' ').trim();
     } else {
@@ -547,6 +547,8 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
             subtotal,
             taxRate: 0,
             taxAmount: 0,
+            discountNet,
+            deliveryCharge,
             total,
           });
 
