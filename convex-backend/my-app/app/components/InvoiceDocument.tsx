@@ -8,7 +8,7 @@ import {
   Font,
 } from "@react-pdf/renderer";
 
-// Register Inter font
+// Register Inter font with all weights
 Font.register({
   family: "Inter",
   src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2",
@@ -30,143 +30,120 @@ Font.register({
   fontWeight: 700,
 });
 
-// Define styles based on pencil design
+// Styles based on exact .pen file specifications
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Inter",
-    fontSize: 12,
-    padding: 80,
     backgroundColor: "#FFFFFF",
+    paddingTop: 80,
+    paddingBottom: 80,
+    paddingLeft: 113,
+    paddingRight: 113,
   },
-  spacer1: {
-    height: 20,
-  },
+  // Invoice Title
   invoiceTitle: {
-    fontSize: 48,
+    fontSize: 87,
     fontWeight: 700,
     color: "#000000",
-    marginBottom: 32,
-  },
-  invoiceInfo: {
-    marginBottom: 32,
-  },
-  invoiceNoRow: {
-    flexDirection: "row",
-    gap: 24,
-    marginBottom: 12,
-  },
-  dateRow: {
-    flexDirection: "row",
-    gap: 24,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: 400,
-    color: "#333333",
-    width: 100,
-  },
-  value: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#000000",
-  },
-  spacer2: {
-    height: 30,
-  },
-  billingSection: {
-    flexDirection: "row",
-    gap: 80,
+    marginTop: 66, // 146 - 80 (page padding)
     marginBottom: 40,
   },
-  billTo: {
-    flex: 1,
+  // Invoice Info Section
+  invoiceInfo: {
+    marginBottom: 30,
   },
-  biller: {
-    flex: 1,
+  invoiceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  invoiceLabel: {
+    fontSize: 30,
+    fontWeight: 500,
+    color: "#333333",
+    width: 172,
+    textAlign: "center",
+  },
+  invoiceValue: {
+    fontSize: 30,
+    fontWeight: 600,
+    color: "#000000",
+    marginLeft: 20,
+  },
+  // Billing Section
+  billingContainer: {
+    flexDirection: "row",
+    marginTop: 40,
+    marginBottom: 50,
+  },
+  billToSection: {
+    width: "50%",
+  },
+  billerSection: {
+    width: "50%",
   },
   billingTitle: {
-    fontSize: 12,
-    fontWeight: 400,
-    color: "#666666",
-    marginBottom: 10,
-  },
-  billingName: {
-    fontSize: 13,
+    fontSize: 28,
     fontWeight: 500,
     color: "#000000",
-    marginBottom: 5,
+    marginBottom: 20,
   },
-  billingText: {
-    fontSize: 13,
-    fontWeight: 400,
-    color: "#333333",
-    marginBottom: 2,
-  },
-  spacer3: {
-    height: 40,
-  },
-  descriptionLabel: {
-    fontSize: 12,
-    fontWeight: 400,
-    color: "#666666",
+  billingName: {
+    fontSize: 28,
+    color: "#000000",
     marginBottom: 10,
   },
+  billingText: {
+    fontSize: 28,
+    color: "#333333",
+    marginBottom: 5,
+  },
+  // Description Label
+  descriptionLabel: {
+    fontSize: 24,
+    fontWeight: "normal",
+    color: "#2f2f2f",
+    marginBottom: 15,
+  },
+  // Table Styles
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#E8E8E8",
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    gap: 20,
+    height: 62,
     alignItems: "center",
-    height: 40,
+    paddingHorizontal: 22,
   },
   tableHeaderText: {
-    fontSize: 12,
+    fontSize: 25,
     fontWeight: 600,
     color: "#000000",
+    textAlign: "center",
   },
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    gap: 20,
-    alignItems: "center",
     height: 40,
+    alignItems: "center",
+    paddingHorizontal: 22,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
   tableCell: {
-    fontSize: 12,
-    fontWeight: 400,
+    fontSize: 25,
+    fontWeight: "normal",
     color: "#333333",
-  },
-  slNoCol: {
-    width: "8%",
-  },
-  itemNameCol: {
-    width: "32%",
-  },
-  quantityCol: {
-    width: "12%",
     textAlign: "center",
   },
-  rateCol: {
-    width: "15%",
-    textAlign: "right",
-  },
-  discountCol: {
-    width: "15%",
-    textAlign: "right",
-  },
-  amountCol: {
-    width: "18%",
-    textAlign: "right",
-  },
-  spacer4: {
-    height: 60,
-  },
+  // Column widths
+  colSlNo: { width: "8%" },
+  colItemName: { width: "32%", textAlign: "left" },
+  colQuantity: { width: "12%" },
+  colRate: { width: "15%" },
+  colDiscount: { width: "15%" },
+  colAmount: { width: "18%" },
+  // Totals Section
   totalsContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: 80,
+    marginTop: 60,
+    alignItems: "flex-end",
   },
   totalsSection: {
     width: 320,
@@ -175,16 +152,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 8,
+    paddingHorizontal: 11,
   },
   totalsLabel: {
-    fontSize: 13,
-    fontWeight: 400,
+    fontSize: 20,
+    fontWeight: "normal",
     color: "#333333",
   },
   totalsValue: {
-    fontSize: 13,
-    fontWeight: 500,
+    fontSize: 20,
     color: "#000000",
+    textAlign: "right",
   },
   grandTotalRow: {
     flexDirection: "row",
@@ -194,53 +172,57 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   grandTotalLabel: {
-    fontSize: 14,
-    fontWeight: 600,
+    fontSize: 25,
     color: "#000000",
   },
   grandTotalValue: {
-    fontSize: 14,
+    fontSize: 22,
     fontWeight: 600,
     color: "#000000",
+    textAlign: "right",
+    width: 150,
   },
+  // Terms Section
   termsSection: {
+    marginTop: 80,
     marginBottom: 120,
   },
   termsTitle: {
-    fontSize: 13,
+    fontSize: 24,
     fontWeight: 600,
     color: "#000000",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   termText: {
-    fontSize: 11,
-    fontWeight: 400,
+    fontSize: 18,
+    fontWeight: "normal",
     color: "#333333",
     lineHeight: 1.6,
     marginBottom: 8,
   },
+  // Footer
   footerNote: {
-    fontSize: 10,
-    fontWeight: 400,
+    fontSize: 15,
+    fontWeight: "normal",
     color: "#999999",
     textAlign: "center",
+    letterSpacing: 5,
   },
 });
 
-// Company information - hardcoded for Techyfy
+// Company information
 const companyInfo = {
   name: "Techyfy",
-  address: "Muradpur",
-  city: "Chittagong 4211",
+  address: "Muradpur, Chittagong 4211",
   phone: "01882771113",
 };
 
-// Terms and conditions - hardcoded
+// Terms and conditions
 const termsAndConditions = [
-  "1. Products under warranty will be repaired or replaced by the supplier, provided the product's invoice, box, serial number, and warranty sticker are all kept intact.",
-  "2. The warranty will be followed as per the terms and conditions of the supplier.",
-  "3. Techyfy offers a 7-day replacement warranty, provided that the product's invoice, box, serial number, and warranty sticker are all kept intact.",
-  "4. For further information, please visit https://techyfy.shop/terms_&_conditions",
+  "1. The products under warranty (invoice, box, serial number, and warranty sticker must all be kept intact) will be repaired or replaced by the supplier.",
+  "2. Time taken for the warranty process will be controlled by the supplier.",
+  "3. The warranty will be followed as per the terms and conditions of the supplier.",
+  "4. Techyfy offers a 7-day replacement warranty, provided that the product's invoice, box, serial number, and warranty sticker are all kept intact.",
 ];
 
 interface InvoiceItem {
@@ -285,39 +267,28 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({
     })}`;
   };
 
-  // Format discount number
-  const formatDiscount = (discount: number) => {
-    return discount.toFixed(2);
-  };
-
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Spacer */}
-        <View style={styles.spacer1} />
-
         {/* Invoice Title */}
         <Text style={styles.invoiceTitle}>Invoice</Text>
 
         {/* Invoice Info */}
         <View style={styles.invoiceInfo}>
-          <View style={styles.invoiceNoRow}>
-            <Text style={styles.label}>Invoice No :</Text>
-            <Text style={styles.value}>{invoiceNumber}</Text>
+          <View style={styles.invoiceRow}>
+            <Text style={styles.invoiceLabel}>Invoice No :</Text>
+            <Text style={styles.invoiceValue}>{invoiceNumber}</Text>
           </View>
-          <View style={styles.dateRow}>
-            <Text style={styles.label}>Date :</Text>
-            <Text style={styles.value}>{date}</Text>
+          <View style={styles.invoiceRow}>
+            <Text style={styles.invoiceLabel}>Date            :  </Text>
+            <Text style={styles.invoiceValue}>{date}</Text>
           </View>
         </View>
 
-        {/* Spacer */}
-        <View style={styles.spacer2} />
-
         {/* Billing Section */}
-        <View style={styles.billingSection}>
+        <View style={styles.billingContainer}>
           {/* Bill To */}
-          <View style={styles.billTo}>
+          <View style={styles.billToSection}>
             <Text style={styles.billingTitle}>Bill to</Text>
             <Text style={styles.billingName}>{customerName}</Text>
             <Text style={styles.billingText}>{customerAddress}</Text>
@@ -325,45 +296,38 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({
           </View>
 
           {/* Biller */}
-          <View style={styles.biller}>
+          <View style={styles.billerSection}>
             <Text style={styles.billingTitle}>Biller</Text>
             <Text style={styles.billingName}>{companyInfo.name}</Text>
             <Text style={styles.billingText}>{companyInfo.address}</Text>
-            <Text style={styles.billingText}>{companyInfo.city}</Text>
             <Text style={styles.billingText}>{companyInfo.phone}</Text>
           </View>
         </View>
-
-        {/* Spacer */}
-        <View style={styles.spacer3} />
 
         {/* Description Label */}
         <Text style={styles.descriptionLabel}>Description</Text>
 
         {/* Table Header */}
         <View style={styles.tableHeader}>
-          <Text style={[styles.tableHeaderText, styles.slNoCol]}>Sl No.</Text>
-          <Text style={[styles.tableHeaderText, styles.itemNameCol]}>Item Name</Text>
-          <Text style={[styles.tableHeaderText, styles.quantityCol]}>Quantity</Text>
-          <Text style={[styles.tableHeaderText, styles.rateCol]}>Rate</Text>
-          <Text style={[styles.tableHeaderText, styles.discountCol]}>Discount</Text>
-          <Text style={[styles.tableHeaderText, styles.amountCol]}>Amount</Text>
+          <Text style={[styles.tableHeaderText, styles.colSlNo]}>Sl No.</Text>
+          <Text style={[styles.tableHeaderText, styles.colItemName]}>Item Name</Text>
+          <Text style={[styles.tableHeaderText, styles.colQuantity]}>Quantity</Text>
+          <Text style={[styles.tableHeaderText, styles.colRate]}>Rate</Text>
+          <Text style={[styles.tableHeaderText, styles.colDiscount]}>Discount</Text>
+          <Text style={[styles.tableHeaderText, styles.colAmount]}>Amount</Text>
         </View>
 
         {/* Table Rows */}
         {items.map((item, index) => (
           <View key={index} style={styles.tableRow}>
-            <Text style={[styles.tableCell, styles.slNoCol]}>{item.slNo}</Text>
-            <Text style={[styles.tableCell, styles.itemNameCol]}>{item.itemName}</Text>
-            <Text style={[styles.tableCell, styles.quantityCol]}>{item.quantity}</Text>
-            <Text style={[styles.tableCell, styles.rateCol]}>{formatCurrency(item.rate)}</Text>
-            <Text style={[styles.tableCell, styles.discountCol]}>{formatDiscount(item.discountRow)}</Text>
-            <Text style={[styles.tableCell, styles.amountCol]}>{formatCurrency(item.amount)}</Text>
+            <Text style={[styles.tableCell, styles.colSlNo]}>{item.slNo}</Text>
+            <Text style={[styles.tableCell, styles.colItemName]}>{item.itemName}</Text>
+            <Text style={[styles.tableCell, styles.colQuantity]}>{item.quantity}</Text>
+            <Text style={[styles.tableCell, styles.colRate]}>{formatCurrency(item.rate)}</Text>
+            <Text style={[styles.tableCell, styles.colDiscount]}>{formatCurrency(item.discountRow)}</Text>
+            <Text style={[styles.tableCell, styles.colAmount]}>{formatCurrency(item.amount)}</Text>
           </View>
         ))}
-
-        {/* Spacer */}
-        <View style={styles.spacer4} />
 
         {/* Totals Section */}
         <View style={styles.totalsContainer}>
