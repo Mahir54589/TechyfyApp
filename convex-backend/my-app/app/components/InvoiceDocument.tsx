@@ -56,17 +56,22 @@ const styles = StyleSheet.create({
   billingTitle: {
     fontSize: 10,
     color: "#666666",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   billingName: {
     fontSize: 11,
     color: "#000000",
-    marginBottom: 3,
+    marginBottom: 8,
   },
-  billingText: {
-    fontSize: 10,
+  billingAddress: {
+    fontSize: 11,
     color: "#333333",
-    marginBottom: 2,
+    marginBottom: 8,
+    lineHeight: 1.4,
+  },
+  billingPhone: {
+    fontSize: 11,
+    color: "#333333",
   },
   descriptionLabel: {
     fontSize: 10,
@@ -262,15 +267,15 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({
           <View style={styles.billToSection}>
             <Text style={styles.billingTitle}>Bill to</Text>
             <Text style={styles.billingName}>{customerName}</Text>
-            <Text style={styles.billingText}>{customerAddress}</Text>
-            <Text style={styles.billingText}>{customerPhone}</Text>
+            <Text style={styles.billingAddress}>{customerAddress}</Text>
+            <Text style={styles.billingPhone}>{customerPhone}</Text>
           </View>
 
           <View style={styles.billerSection}>
             <Text style={styles.billingTitle}>Biller</Text>
             <Text style={styles.billingName}>{companyInfo.name}</Text>
-            <Text style={styles.billingText}>{companyInfo.address}</Text>
-            <Text style={styles.billingText}>{companyInfo.phone}</Text>
+            <Text style={styles.billingAddress}>{companyInfo.address}</Text>
+            <Text style={styles.billingPhone}>{companyInfo.phone}</Text>
           </View>
         </View>
 
