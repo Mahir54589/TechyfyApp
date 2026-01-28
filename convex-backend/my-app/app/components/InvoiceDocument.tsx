@@ -230,9 +230,9 @@ const styles = StyleSheet.create({
 // Company information - hardcoded for Techyfy
 const companyInfo = {
   name: "Techyfy",
-  address: "Jane Alam Devnas Road",
-  city: "Chittagong",
-  phone: "01306277555",
+  address: "Muradpur",
+  city: "Chittagong 4211",
+  phone: "01882771113",
 };
 
 // Terms and conditions - hardcoded
