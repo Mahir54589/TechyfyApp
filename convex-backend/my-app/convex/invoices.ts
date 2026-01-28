@@ -203,9 +203,14 @@ export const generatePDF = action({
         throw new Error(`PDF API error: ${response.status} - ${errorText}`);
       }
       
-      // Get PDF as buffer and convert to base64
+      // Get PDF as buffer and convert to base64 (Web compatible)
       const pdfBuffer = await response.arrayBuffer();
-      const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+      const pdfBytes = new Uint8Array(pdfBuffer);
+      let pdfBase64 = "";
+      for (let i = 0; i < pdfBytes.length; i++) {
+        pdfBase64 += String.fromCharCode(pdfBytes[i]);
+      }
+      pdfBase64 = btoa(pdfBase64);
       
       // Update invoice with PDF URL placeholder (could store actual URL if uploaded)
       await ctx.runMutation(api.invoices.updatePdfUrl, {
@@ -252,3 +257,17 @@ export const get = query({
     return await ctx.db.get(args.id);
   },
 });
+
+// Helper function for base64 encoding (Web compatible)
+function btoa(str: string): string {
+  if (typeof globalThis.btoa === "function") {
+    return globalThis.btoa(str);
+  }
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let output = "";
+  for (let block = 0, charCode, idx = 0, map = chars; str.charAt(idx | 0) || (map = "=", idx % 1); output += map.charAt(63 & block >> 8 - idx % 1 * 8)) {
+    charCode = str.charCodeAt(idx += 3 / 4);
+    block = block << 8 | charCode;
+  }
+  return output;
+}

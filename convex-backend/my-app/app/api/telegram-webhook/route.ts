@@ -362,12 +362,12 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
         )}\n`;
       });
 
-      const taxRate = 0.15; // 15% VAT
-      const taxAmount = subtotal * taxRate;
-      const total = subtotal + taxAmount;
+      const taxRate = 0; // No VAT
+      const taxAmount = 0;
+      const total = subtotal;
 
       summary += `\nSubtotal: ${formatCurrency(subtotal)}\n`;
-      summary += `VAT (15%): ${formatCurrency(taxAmount)}\n`;
+      // summary += `VAT (0%): ${formatCurrency(taxAmount)}\n`; // Hidden when 0
       summary += "━━━━━━━━━━━━━━━━━━\n";
       summary += `💰 Total: ${formatCurrency(total)}\n\n`;
       summary += "Reply 'OK' to generate invoice\n";
@@ -518,7 +518,7 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
             });
 
             summary += `\nSubtotal: ${formatCurrency(newSubtotal)}\n`;
-            summary += `VAT (15%): ${formatCurrency(newTaxAmount)}\n`;
+            // summary += `VAT (0%): ${formatCurrency(newTaxAmount)}\n`; // Hidden when 0
             summary += "━━━━━━━━━━━━━━━━━━\n";
             summary += `💰 Total: ${formatCurrency(newTotal)}\n\n`;
             summary += "Reply 'OK' to confirm";
