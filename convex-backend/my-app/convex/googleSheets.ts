@@ -90,8 +90,8 @@ export const syncFromGoogleSheets = action({
     try {
       // Fetch data from Google Sheets
       // Sheet format: A=Model, B=Selling Price, C=Warranty, D=Color, E=Type
-      // Tab name: ProductsDatabase, Data starts from row 3 (row 2 has headers)
-      const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/ProductsDatabase!A3:E`;
+      // Tab name: ProductsDatabase, Data starts from row 2
+      const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/ProductsDatabase!A2:E`;
       
       // Get OAuth token
       const token = await getGoogleAccessToken(GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY);
@@ -111,6 +111,8 @@ export const syncFromGoogleSheets = action({
 
       const data = await response.json();
       const rows = data.values || [];
+      
+      console.log("Sheet data received:", { rowCount: rows.length, firstFewRows: rows.slice(0, 3) });
 
       if (rows.length === 0) {
         return {
@@ -128,18 +130,25 @@ export const syncFromGoogleSheets = action({
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         
+        console.log(`Processing row ${i + 2}:`, row);
+        
         // Skip empty rows
-        if (!row[0]) continue;
+        if (!row[0]) {
+          console.log(`Row ${i + 2}: Skipping - empty model`);
+          continue;
+        }
 
         // Validate required fields (Model and Selling Price)
         if (!row[0] || row[1] === undefined || row[1] === null) {
           errors.push(`Row ${i + 2}: Missing required fields (model or selling price)`);
+          console.log(`Row ${i + 2}: Skipping - missing model or price`);
           continue;
         }
 
         const price = parseFloat(row[1]);
         if (isNaN(price) || price < 0) {
           errors.push(`Row ${i + 2}: Invalid price "${row[1]}"`);
+          console.log(`Row ${i + 2}: Skipping - invalid price "${row[1]}"`);
           continue;
         }
 
@@ -160,6 +169,8 @@ export const syncFromGoogleSheets = action({
       let productsAdded = 0;
       let productsUpdated = 0;
 
+      console.log("Products to insert/update:", products.length, products.slice(0, 3));
+      
       // Insert or update products
       for (const product of products) {
         const existing = existingMap.get(product.name.toLowerCase());
