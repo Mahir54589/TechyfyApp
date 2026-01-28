@@ -1,4 +1,5 @@
 import React from "react";
+import path from "path";
 import {
   Page,
   Text,
@@ -8,28 +9,31 @@ import {
   Font,
 } from "@react-pdf/renderer";
 
-// Register Inter font using local TTF files
+// Get absolute path to fonts directory
+const fontsDir = path.join(process.cwd(), "public", "fonts");
+
+// Register Inter font using local TTF files with absolute paths
 Font.register({
   family: "Inter",
-  src: "/fonts/Inter-Regular.ttf",
+  src: path.join(fontsDir, "Inter-Regular.ttf"),
   fontWeight: 400,
 });
 
 Font.register({
   family: "Inter",
-  src: "/fonts/Inter-Medium.ttf",
+  src: path.join(fontsDir, "Inter-Medium.ttf"),
   fontWeight: 500,
 });
 
 Font.register({
   family: "Inter",
-  src: "/fonts/Inter-SemiBold.ttf",
+  src: path.join(fontsDir, "Inter-SemiBold.ttf"),
   fontWeight: 600,
 });
 
 Font.register({
   family: "Inter",
-  src: "/fonts/Inter-Bold.ttf",
+  src: path.join(fontsDir, "Inter-Bold.ttf"),
   fontWeight: 700,
 });
 
