@@ -1,7 +1,7 @@
 import React from "react";
 import { NextRequest, NextResponse } from "next/server";
 import { pdf } from "@react-pdf/renderer";
-import InvoiceDocument from "../../../components/InvoiceDocument";
+import InvoiceDocument from "../../components/InvoiceDocument";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
       customerAddress,
       customerPhone,
       items,
-      subtotal,
-      taxRate,
-      taxAmount,
-      total
+      netTotal,
+      discountNet,
+      deliveryCharge,
+      grandTotal
     } = body;
     
     if (!invoiceNumber || !customerName || !items || !Array.isArray(items)) {
@@ -38,10 +38,10 @@ export async function POST(request: NextRequest) {
         customerAddress={customerAddress}
         customerPhone={customerPhone}
         items={items}
-        subtotal={subtotal}
-        taxRate={taxRate}
-        taxAmount={taxAmount}
-        total={total}
+        netTotal={netTotal}
+        discountNet={discountNet || 0}
+        deliveryCharge={deliveryCharge || 0}
+        grandTotal={grandTotal}
       />
     ).toBlob();
     /* eslint-enable react-hooks/error-boundaries */

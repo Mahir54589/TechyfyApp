@@ -178,6 +178,26 @@ export const generatePDF = action({
     }
     
     try {
+      // Transform items to new format for InvoiceDocument
+      const transformedItems = invoice.items.map((item, index) => ({
+        slNo: index + 1,
+        itemName: item.productName,
+        quantity: item.quantity,
+        rate: item.unitPrice,
+        discountRow: 0, // Default discount per row (can be extended later)
+        amount: item.amount,
+      }));
+      
+      // Calculate totals (for now, no discount, no delivery charge)
+      const netTotal = invoice.subtotal;
+      const discountNet = 0;
+      const deliveryCharge = 0;
+      const grandTotal = invoice.total;
+      
+      // Format date as DD-MM-YYYY
+      const date = new Date(invoice.date);
+      const formattedDate = `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
+      
       // Call the PDF generation API using global fetch
       const response = await fetch(PDF_API_URL, {
         method: "POST",
@@ -186,15 +206,15 @@ export const generatePDF = action({
         },
         body: JSON.stringify({
           invoiceNumber: invoice.invoiceNumber,
-          date: new Date(invoice.date).toISOString().split("T")[0],
+          date: formattedDate,
           customerName: invoice.customerName,
           customerAddress: invoice.customerAddress,
           customerPhone: invoice.customerPhone,
-          items: invoice.items,
-          subtotal: invoice.subtotal,
-          taxRate: invoice.taxRate,
-          taxAmount: invoice.taxAmount,
-          total: invoice.total,
+          items: transformedItems,
+          netTotal,
+          discountNet,
+          deliveryCharge,
+          grandTotal,
         }),
       });
       

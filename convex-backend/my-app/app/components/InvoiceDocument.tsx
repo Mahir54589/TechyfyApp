@@ -1,3 +1,4 @@
+import React from "react";
 import {
   Page,
   Text,
@@ -13,19 +14,16 @@ Font.register({
   src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2",
   fontWeight: 400,
 });
-
 Font.register({
   family: "Inter",
   src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
   fontWeight: 500,
 });
-
 Font.register({
   family: "Inter",
   src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
   fontWeight: 600,
 });
-
 Font.register({
   family: "Inter",
   src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
