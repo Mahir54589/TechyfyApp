@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse(arrayBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="Invoice_${invoiceNumber}_${customerName.replace(/\s+/g, '_')}.pdf"`,
+        "Content-Disposition": `attachment; filename="${invoiceNumber}_${customerName.replace(/\s+/g, '_')}.pdf"`,
       },
     });
   } catch (error) {

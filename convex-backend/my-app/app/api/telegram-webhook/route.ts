@@ -17,6 +17,8 @@ enum ConversationState {
   AWAITING_CUSTOMER_INFO = "awaiting_customer_info",
   AWAITING_PRODUCTS = "awaiting_products",
   AWAITING_QUANTITY = "awaiting_quantity",
+  AWAITING_DELIVERY_CHARGE = "awaiting_delivery_charge",
+  AWAITING_DISCOUNT = "awaiting_discount",
   AWAITING_CONFIRMATION = "awaiting_confirmation",
 }
 
@@ -25,6 +27,12 @@ interface CustomerInfo {
   name: string;
   address: string;
   phone: string;
+}
+
+interface QuantityItem {
+  productIndex: number;
+  quantity: number;
+  discountPercent?: number;
 }
 
 interface ConversationData {
@@ -36,10 +44,9 @@ interface ConversationData {
     warranty: string;
     sellingPrice: number;
   }>;
-  quantities?: Array<{
-    productIndex: number;
-    quantity: number;
-  }>;
+  quantities?: QuantityItem[];
+  deliveryCharge?: number;
+  discountNet?: number;
   subtotal?: number;
   taxRate?: number;
   taxAmount?: number;
@@ -53,28 +60,46 @@ const validatePhone = (phone: string): boolean => {
 };
 
 // Helper function to parse customer info
+// Format: Name, Address (until . or 01xxxx), Phone
 const parseCustomerInfo = (text: string): CustomerInfo | null => {
-  // Try comma-separated format first
-  const commaMatch = text.match(/^([^,]+),\s*([^,]+),\s*(.+)$/);
-  if (commaMatch) {
-    return {
-      name: commaMatch[1].trim(),
-      address: commaMatch[2].trim(),
-      phone: commaMatch[3].trim(),
-    };
+  // Find first comma to separate name
+  const firstCommaIndex = text.indexOf(',');
+  if (firstCommaIndex === -1) return null;
+  
+  const name = text.substring(0, firstCommaIndex).trim();
+  const rest = text.substring(firstCommaIndex + 1).trim();
+  
+  // Find phone number (starts with 01) or fullstop
+  const phoneMatch = rest.match(/(01\d{9})/);
+  const fullstopIndex = rest.indexOf('.');
+  
+  let address: string;
+  let phone: string;
+  
+  if (phoneMatch) {
+    const phoneIndex = rest.indexOf(phoneMatch[1]);
+    address = rest.substring(0, phoneIndex).trim();
+    // Remove trailing punctuation from address
+    address = address.replace(/[,;.]+$/, '').trim();
+    phone = phoneMatch[1];
+  } else if (fullstopIndex !== -1) {
+    address = rest.substring(0, fullstopIndex).trim();
+    const afterFullstop = rest.substring(fullstopIndex + 1).trim();
+    const phoneInRest = afterFullstop.match(/(01\d{9})/);
+    phone = phoneInRest ? phoneInRest[1] : afterFullstop;
+  } else {
+    // Fallback: try to find last 11 digit number as phone
+    const parts = rest.split(/[\s,]+/);
+    const lastPart = parts[parts.length - 1];
+    if (/^01\d{9}$/.test(lastPart)) {
+      phone = lastPart;
+      address = parts.slice(0, -1).join(' ').trim();
+    } else {
+      return null;
+    }
   }
-
-  // Try line-separated format
-  const lines = text.split("\n").filter((line) => line.trim());
-  if (lines.length >= 3) {
-    return {
-      name: lines[0].trim(),
-      address: lines[1].trim(),
-      phone: lines[2].trim(),
-    };
-  }
-
-  return null;
+  
+  return { name, address, phone };
 };
 
 // Helper function to format currency
@@ -266,7 +291,8 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
 
         message += "Reply with quantity for each:\n";
         message += "Format: 1=2, 2=1 (product number = quantity)\n";
-        message += "Or just 'OK' for 1 unit each";
+        message += "For discount: 1=1, D5 (5% discount on item 1)\n";
+        message += "Or just 'OK' for 1 unit each, no discount";
 
         await sendMessage(chatId, message);
 
@@ -299,79 +325,167 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
         return;
       }
 
-      let quantities: Array<{ productIndex: number; quantity: number }>;
+      let quantities: QuantityItem[];
 
       if (text.toLowerCase() === "ok") {
         // Set default quantity of 1 for all products
         quantities = stateData.foundProducts.map((_, index) => ({
           productIndex: index,
           quantity: 1,
+          discountPercent: 0,
         }));
       } else {
-        // Parse quantities
-        const quantityMatches = text.match(/(\d+)\s*=\s*(\d+)/g);
-        if (!quantityMatches) {
+        // Parse quantities with optional discount
+        // Format: "1=2" or "1=2, D5" (5% discount)
+        const itemMatches = text.match(/(\d+)\s*=\s*(\d+)(?:\s*,\s*[Dd]\s*(\d+))?/g);
+        if (!itemMatches) {
           await sendMessage(
             chatId,
             "❌ Invalid format. Use: 1=2, 2=1 (product number = quantity)\n" +
+              "For discount: 1=1, D5 (5% off item 1)\n" +
               "Or just 'OK' for 1 unit each"
           );
           return;
         }
 
         quantities = [];
-        for (const match of quantityMatches) {
-          const parts = match.split("=").map((s) => s.trim());
-          const productIndex = parseInt(parts[0]) - 1; // Convert to 0-based index
+        for (const match of itemMatches) {
+          const parts = match.split(/[=,]/).map((s) => s.trim());
+          const productIndex = parseInt(parts[0]) - 1;
           const quantity = parseInt(parts[1]);
+          // Check for D followed by number for discount
+          let discountPercent = 0;
+          if (parts.length >= 3) {
+            const discountMatch = parts[2].match(/[Dd]\s*(\d+)/);
+            if (discountMatch) {
+              discountPercent = parseInt(discountMatch[1]);
+            }
+          }
           quantities.push({
             productIndex,
             quantity,
+            discountPercent,
           });
         }
       }
 
-      // Calculate line totals and prepare summary
-      let subtotal = 0;
-      let summary = "📋 *Invoice Summary*\n━━━━━━━━━━━━━━━━━━\n";
-
-      // Check if all products exist before proceeding
-      for (let i = 0; i < quantities.length; i++) {
-        const item = quantities[i];
-        const product = stateData.foundProducts[item.productIndex];
-        if (!product) {
-          await sendMessage(
-            chatId,
-            `❌ Error: Product not found for item ${
-              i + 1
-            }. Please start over with /start`
-          );
-          await convex.mutation(api.conversationState.clearState, { userId });
-          return;
-        }
-      }
-
-      // Now safely calculate totals
-      quantities.forEach((item, index) => {
-        const product = stateData.foundProducts![item.productIndex];
-        const amount = product.sellingPrice * item.quantity;
-        subtotal += amount;
-
-        summary += `${index + 1}. ${product.name} x${item.quantity} — ${formatCurrency(
-          amount
-        )}\n`;
+      // Save quantities and ask for delivery charge
+      await convex.mutation(api.conversationState.setState, {
+        userId,
+        state: ConversationState.AWAITING_DELIVERY_CHARGE,
+        data: {
+          ...stateData,
+          quantities,
+        },
       });
 
-      const taxRate = 0; // No VAT
-      const taxAmount = 0;
-      const total = subtotal;
+      await sendMessage(
+        chatId,
+        "🚚 Select delivery charge:\n" +
+          "1. Inside Chittagong - 60 Tk\n" +
+          "2. Outside Chittagong - 120 Tk\n\n" +
+          "Reply with 1 or 2"
+      );
+      break;
+    }
+
+    case ConversationState.AWAITING_DELIVERY_CHARGE: {
+      let deliveryCharge = 0;
+      
+      if (text === "1" || text.toLowerCase().includes("inside")) {
+        deliveryCharge = 60;
+      } else if (text === "2" || text.toLowerCase().includes("outside")) {
+        deliveryCharge = 120;
+      } else {
+        await sendMessage(
+          chatId,
+          "❌ Invalid choice. Please reply with:\n" +
+            "1 for Inside Chittagong (60 Tk)\n" +
+            "2 for Outside Chittagong (120 Tk)"
+        );
+        return;
+      }
+
+      // Save delivery charge and ask for discount
+      await convex.mutation(api.conversationState.setState, {
+        userId,
+        state: ConversationState.AWAITING_DISCOUNT,
+        data: {
+          ...stateData,
+          deliveryCharge,
+        },
+      });
+
+      await sendMessage(
+        chatId,
+        "💰 Any flat discount to apply?\n\n" +
+          "Reply with amount (e.g., 100) or 0 for no discount"
+      );
+      break;
+    }
+
+    case ConversationState.AWAITING_DISCOUNT: {
+      const discountAmount = parseFloat(text);
+      
+      if (isNaN(discountAmount) || discountAmount < 0) {
+        await sendMessage(
+          chatId,
+          "❌ Invalid amount. Please enter a valid discount amount or 0"
+        );
+        return;
+      }
+
+      if (!stateData.foundProducts || !stateData.quantities) {
+        await sendMessage(
+          chatId,
+          "❌ Error: No invoice data found. Please start over with /start"
+        );
+        await convex.mutation(api.conversationState.clearState, { userId });
+        return;
+      }
+
+      // Calculate totals with row-level discounts and delivery charge
+      let subtotal = 0;
+      const deliveryCharge = stateData.deliveryCharge || 0;
+      
+      const itemsWithAmounts = stateData.quantities.map((item) => {
+        const product = stateData.foundProducts![item.productIndex];
+        const grossAmount = product.sellingPrice * item.quantity;
+        const rowDiscount = grossAmount * (item.discountPercent || 0) / 100;
+        const netAmount = grossAmount - rowDiscount;
+        subtotal += netAmount;
+        
+        return {
+          ...item,
+          product,
+          grossAmount,
+          rowDiscount,
+          netAmount,
+        };
+      });
+
+      const discountNet = discountAmount;
+      const grandTotal = subtotal + deliveryCharge - discountNet;
+
+      // Build summary
+      let summary = "📋 *Invoice Summary*\n━━━━━━━━━━━━━━━━━━\n";
+
+      itemsWithAmounts.forEach((item, index) => {
+        summary += `${index + 1}. ${item.product.name} x${item.quantity}`;
+        if (item.discountPercent && item.discountPercent > 0) {
+          summary += ` (-${item.discountPercent}%)`;
+        }
+        summary += ` — ${formatCurrency(item.netAmount)}\n`;
+      });
 
       summary += `\nSubtotal: ${formatCurrency(subtotal)}\n`;
-      // summary += `VAT (0%): ${formatCurrency(taxAmount)}\n`; // Hidden when 0
+      if (discountNet > 0) {
+        summary += `Discount: -${formatCurrency(discountNet)}\n`;
+      }
+      summary += `Delivery: ${formatCurrency(deliveryCharge)}\n`;
       summary += "━━━━━━━━━━━━━━━━━━\n";
-      summary += `💰 Total: ${formatCurrency(total)}\n\n`;
-      summary += "Reply 'OK' to generate invoice\n";
-      summary += "Or edit price: '1 125000' (changes item 1 price to ৳125,000)";
+      summary += `💰 Grand Total: ${formatCurrency(grandTotal)}\n\n`;
+      summary += "Reply 'OK' to generate invoice";
 
       await sendMessage(chatId, summary, { parse_mode: "Markdown" });
 
@@ -381,7 +495,7 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
         state: ConversationState.AWAITING_CONFIRMATION,
         data: {
           ...stateData,
-          quantities,
+          discountNet,
           subtotal,
           taxRate,
           taxAmount,
@@ -403,9 +517,13 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
 
       if (text.toLowerCase() === "ok") {
         try {
-          // Create invoice in Convex
+          // Calculate items with row-level discounts
           const items = stateData.quantities.map((item) => {
             const product = stateData.foundProducts![item.productIndex];
+            const grossAmount = product.sellingPrice * item.quantity;
+            const rowDiscount = grossAmount * (item.discountPercent || 0) / 100;
+            const netAmount = grossAmount - rowDiscount;
+            
             return {
               productId: product._id as string,
               productName: product.name,
@@ -413,9 +531,14 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
               warranty: product.warranty,
               quantity: item.quantity,
               unitPrice: product.sellingPrice,
-              amount: product.sellingPrice * item.quantity,
+              amount: netAmount,
             };
           });
+
+          const deliveryCharge = stateData.deliveryCharge || 0;
+          const discountNet = stateData.discountNet || 0;
+          const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+          const total = subtotal + deliveryCharge - discountNet;
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invoice = await convex.mutation(api.invoices.create, {
@@ -423,10 +546,10 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
             customerAddress: stateData.customerInfo.address,
             customerPhone: stateData.customerInfo.phone,
             items: items as any,
-            subtotal: stateData.subtotal!,
-            taxRate: stateData.taxRate!,
-            taxAmount: stateData.taxAmount!,
-            total: stateData.total!,
+            subtotal,
+            taxRate: 0,
+            taxAmount: 0,
+            total,
           });
 
           if (!invoice) {
@@ -448,15 +571,21 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
             // Convert base64 to buffer
             const pdfBuffer = Buffer.from(pdfResult.pdfBase64, "base64");
 
-            // Send PDF to user
+            // Send PDF to user with custom filename
             const docOptions: SendDocumentOptions = {
               caption:
                 `✅ Invoice generated successfully!\n` +
                 `📄 Invoice Number: ${invoice.invoiceNumber}\n` +
-                `📅 Date: ${new Date(invoice.date).toLocaleDateString()}\n\n` +
+                `📅 Date: ${new Date(invoice.date).toLocaleDateString()}\n` +
+                `💰 Total: ${formatCurrency(invoice.total)}\n\n` +
                 "You can download and share this PDF with your customer.",
             };
-            await bot.sendDocument(chatId, pdfBuffer, docOptions);
+            await bot.sendDocument(
+              chatId, 
+              pdfBuffer, 
+              docOptions,
+              { filename: `${invoice.invoiceNumber}.pdf`, contentType: 'application/pdf' }
+            );
           } else {
             await sendMessage(
               chatId,

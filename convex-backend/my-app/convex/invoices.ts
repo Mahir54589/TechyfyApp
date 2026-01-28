@@ -124,8 +124,8 @@ export const create = mutation({
       });
     }
     
-    // Generate invoice number in YYYYMM### format
-    const invoiceNumber = `${yearMonth}${String(currentCounter).padStart(3, "0")}`;
+    // Generate invoice number in T-YYYYMM### format
+    const invoiceNumber = `T-${yearMonth}${String(currentCounter).padStart(3, "0")}`;
     
     // Verify no duplicate invoice number exists
     const existingInvoice = await ctx.db
