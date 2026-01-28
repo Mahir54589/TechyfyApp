@@ -20,6 +20,7 @@ type Invoice = {
     warranty: string;
     quantity: number;
     unitPrice: number;
+    discountPercent?: number;
     amount: number;
   }>;
   subtotal: number;
@@ -72,6 +73,7 @@ export const create = mutation({
         warranty: v.string(),
         quantity: v.number(),
         unitPrice: v.number(),
+        discountPercent: v.optional(v.number()),
         amount: v.number(),
       })
     ),
@@ -190,7 +192,7 @@ export const generatePDF = action({
         itemName: item.productName,
         quantity: item.quantity,
         rate: item.unitPrice,
-        discountRow: 0, // Default discount per row (can be extended later)
+        discountRow: item.discountPercent || 0, // Row-level discount %
         amount: item.amount,
       }));
       

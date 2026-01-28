@@ -27,6 +27,7 @@ export default defineSchema({
         warranty: v.string(),
         quantity: v.number(),
         unitPrice: v.number(),
+        discountPercent: v.optional(v.number()), // Row-level discount %
         amount: v.number(),
       })
     ),

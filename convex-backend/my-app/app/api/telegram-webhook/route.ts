@@ -557,6 +557,7 @@ const handleMessage = async (msg: TelegramBot.Message): Promise<void> => {
               warranty: product.warranty,
               quantity: item.quantity,
               unitPrice: product.sellingPrice,
+              discountPercent: item.discountPercent || 0,
               amount: netAmount,
             };
           });
