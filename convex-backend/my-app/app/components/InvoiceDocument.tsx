@@ -279,7 +279,7 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({
           <Text style={[styles.tableHeaderText, styles.colSlNo]}>Sl No.</Text>
           <Text style={[styles.tableHeaderText, styles.colItemName]}>Item Name</Text>
           <Text style={[styles.tableHeaderText, styles.colQuantity]}>Quantity</Text>
-          <Text style={[styles.tableHeaderText, styles.colRate]}>Rate</Text>
+          <Text style={[styles.tableHeaderText, styles.colRate]}>Unit Price</Text>
           <Text style={[styles.tableHeaderText, styles.colDiscount]}>Discount</Text>
           <Text style={[styles.tableHeaderText, styles.colAmount]}>Amount</Text>
         </View>
