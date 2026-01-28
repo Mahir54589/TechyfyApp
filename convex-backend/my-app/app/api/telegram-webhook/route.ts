@@ -54,13 +54,15 @@ interface ConversationData {
 }
 
 // Helper function to validate Bangladesh phone number
+// Accepts 01XXXXXXXXX format (normalized)
 const validatePhone = (phone: string): boolean => {
   const phoneRegex = /^01[0-9]{9}$/;
   return phoneRegex.test(phone.replace(/[\s-]/g, ""));
 };
 
 // Helper function to parse customer info
-// Format: Name, Address (until . or 01xxxx or +8801xxxx), Phone
+// Format: Name, Address (until . or phone number), Phone
+// Phone formats: 01XXXXXXXXX, +8801XXXXXXXXX, 8801XXXXXXXXX, with optional dashes
 const parseCustomerInfo = (text: string): CustomerInfo | null => {
   // Find first comma to separate name
   const firstCommaIndex = text.indexOf(',');
@@ -69,30 +71,56 @@ const parseCustomerInfo = (text: string): CustomerInfo | null => {
   const name = text.substring(0, firstCommaIndex).trim();
   const rest = text.substring(firstCommaIndex + 1).trim();
   
-  // Find phone number (starts with 01 or +8801)
-  const phoneMatch = rest.match(/((?:\+8801|01)\d{9})/);
+  // Flexible phone regex: optional +, optional 88, then 01 followed by 9 digits
+  // Allows dashes anywhere in the number
+  // Matches: +8801819987654, 8801819987654, 01819987654, 01-819-987-654, +880-18-199-87654, etc.
+  const phoneRegex = /(?:\+?88)?0?1\d{9}/;
+  
+  // Remove all dashes to get clean number for matching
+  const restClean = rest.replace(/-/g, '');
+  const phoneMatch = restClean.match(/(\+?8801\d{9}|01\d{9})/);
+  
+  // Also try matching in original text with dashes
+  const phoneMatchWithDashes = rest.match(/(\+?880-\d{2}-\d{3}-\d{4,5}|\+?880\d{10}|01\d{1}-\d{3}-\d{4,5}|01\d{9})/);
+  
   const fullstopIndex = rest.indexOf('.');
   
   let address: string;
   let phone: string;
   
-  if (phoneMatch) {
-    const phoneIndex = rest.indexOf(phoneMatch[1]);
+  // Try to find phone in the text
+  let phoneStr: string | null = null;
+  let phoneIndex = -1;
+  
+  // First try pattern with dashes preserved
+  if (phoneMatchWithDashes) {
+    phoneStr = phoneMatchWithDashes[0].replace(/-/g, '');
+    phoneIndex = rest.indexOf(phoneMatchWithDashes[0]);
+  } else if (phoneMatch) {
+    phoneStr = phoneMatch[0];
+    // Find position in original text (accounting for possible dashes)
+    phoneIndex = rest.search(/(\+?88)?0?1[\d-]{8,11}/);
+  }
+  
+  if (phoneStr && phoneIndex !== -1) {
     address = rest.substring(0, phoneIndex).trim();
     // Remove trailing punctuation from address
     address = address.replace(/[,;.]+$/, '').trim();
-    phone = phoneMatch[1];
+    
+    // Normalize phone: remove + and 88 prefix, keep 01XXXXXXXXX format
+    phone = phoneStr.replace(/\+?88/, '');
   } else if (fullstopIndex !== -1) {
     address = rest.substring(0, fullstopIndex).trim();
-    const afterFullstop = rest.substring(fullstopIndex + 1).trim();
-    const phoneInRest = afterFullstop.match(/((?:\+8801|01)\d{9})/);
-    phone = phoneInRest ? phoneInRest[1] : afterFullstop;
+    const afterFullstop = rest.substring(fullstopIndex + 1).trim().replace(/-/g, '');
+    const phoneInRest = afterFullstop.match(/(\+?8801\d{9}|01\d{9})/);
+    phone = phoneInRest ? phoneInRest[0].replace(/\+?88/, '') : afterFullstop;
   } else {
-    // Fallback: try to find last phone number pattern
+    // Fallback: try to find phone pattern at the end
     const parts = rest.split(/[\s,]+/);
-    const lastPart = parts[parts.length - 1];
-    if (/^(?:\+8801|01)\d{9}$/.test(lastPart)) {
-      phone = lastPart;
+    const lastPart = parts[parts.length - 1].replace(/-/g, '');
+    const lastPartMatch = lastPart.match(/^(\+?8801\d{9}|01\d{9})$/);
+    if (lastPartMatch) {
+      phone = lastPartMatch[0].replace(/\+?88/, '');
       address = parts.slice(0, -1).join(' ').trim();
     } else {
       return null;
